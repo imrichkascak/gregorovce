@@ -1,0 +1,19 @@
+{
+  "name": "gregorovce-3d",
+  "version": "1.0.0",
+  "description": "Interaktívna 3D vizualizácia obce Gregorovce postavená z OpenStreetMap a výškového modelu",
+  "main": "index.js",
+  "scripts": {
+    "start": "python3 -m http.server 5173",
+    "fetch:osm": "node scripts/fetch-osm.mjs data/gregorovce-osm.json",
+    "fetch:elevation": "node scripts/fetch-elevation.mjs data/heightmap.json",
+    "fetch:all": "npm run fetch:osm && npm run fetch:elevation"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "pngjs": "^7.0.0"
+  }
+}
