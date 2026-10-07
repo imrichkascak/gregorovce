@@ -9,16 +9,16 @@ import { facadeTexture, signTexture } from './textures.js';
 
 const CHURCH_NAME = 'Kostol narodenia Panny Márie';
 
-const WALL_COLORS = ['#e9e2d3', '#ded4bf', '#e6dcc8', '#d8cdb6', '#efe9dc'];
-const ROOF_COLORS = ['#9c4a32', '#7d3b2a', '#5f5b57', '#8a6b4a', '#6e7f5a', '#a0432c'];
+const WALL_COLORS = ['#e8dcbf', '#dfcfae', '#e4d4b2', '#d9c9a4', '#efe3c4', '#d4c49e'];
+const ROOF_COLORS = ['#a04a30', '#8a4028', '#7a5638', '#6b665c', '#9a8a6a', '#7d3b2a'];
 
 const KIND_COLORS = {
-  church: { wall: '#f2ecdf', roof: '#4a5560' },
-  shop: { wall: '#e3dcc8', roof: '#8a5a3c' },
-  pub: { wall: '#e8d9bf', roof: '#7a4a30' },
-  townhall: { wall: '#eae4d6', roof: '#6d6a63' },
-  school: { wall: '#ece6d8', roof: '#7a5a44' },
-  fire_station: { wall: '#d9534f', roof: '#8a3a34' },
+  church: { wall: '#f2e8d0', roof: '#4e5560' },
+  shop: { wall: '#e6d9b4', roof: '#96603a' },
+  pub: { wall: '#e8d5ad', roof: '#7a4a30' },
+  townhall: { wall: '#eae0c4', roof: '#6d6a63' },
+  school: { wall: '#ece2c4', roof: '#7a5a44' },
+  fire_station: { wall: '#c94f3d', roof: '#8a3a34' },
 };
 
 const SIGN_STYLES = {

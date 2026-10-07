@@ -3,7 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gregorovce 3D — virtuálna prechádzka</title>
+    <title>Gregorovce: San Andreas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
       * {
         box-sizing: border-box;
@@ -13,8 +19,8 @@
         margin: 0;
         height: 100%;
         overflow: hidden;
-        background: #bcd4e6;
-        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #dfc193;
+        font-family: "Barlow Condensed", system-ui, -apple-system, "Segoe UI", sans-serif;
         color: #fff;
       }
       canvas {
@@ -45,21 +51,24 @@
         position: absolute;
         right: 16px;
         top: 16px;
-        background: rgba(15, 23, 32, 0.62);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 12px;
+        background: rgba(10, 8, 6, 0.45);
+        border: 1px solid rgba(0, 0, 0, 0.55);
+        outline: 1px solid rgba(255, 214, 140, 0.25);
+        border-radius: 4px;
         padding: 12px 14px;
-        backdrop-filter: blur(6px);
-        font-size: 13px;
+        font-size: 15px;
         line-height: 1.7;
         min-width: 210px;
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
       }
       #panel h2 {
         margin: 0 0 6px;
-        font-size: 14px;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        opacity: 0.85;
+        font-family: "Anton", "Barlow Condensed", sans-serif;
+        font-size: 20px;
+        font-weight: 400;
+        letter-spacing: 0.03em;
+        color: #f0a13c;
+        text-shadow: 2px 2px 0 #000;
       }
       #panel .row {
         display: flex;
@@ -74,20 +83,24 @@
         width: 200px;
         height: 200px;
         margin-top: 10px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.25);
+        /* GTA radar: circular, thick black frame */
+        border-radius: 50%;
+        border: 3px solid #000;
+        outline: 2px solid rgba(255, 214, 140, 0.35);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
       }
       #keys {
         position: absolute;
         left: 16px;
         bottom: 16px;
-        background: rgba(15, 23, 32, 0.62);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 12px;
+        background: rgba(10, 8, 6, 0.45);
+        border: 1px solid rgba(0, 0, 0, 0.55);
+        outline: 1px solid rgba(255, 214, 140, 0.25);
+        border-radius: 4px;
         padding: 10px 14px;
-        font-size: 13px;
+        font-size: 15px;
         line-height: 1.7;
-        backdrop-filter: blur(6px);
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
       }
       kbd {
         display: inline-block;
@@ -106,49 +119,55 @@
         inset: 0;
         display: grid;
         place-items: center;
-        background: radial-gradient(circle at 50% 35%, #1c2c3d, #0b1219 75%);
+        background: radial-gradient(circle at 50% 35%, #3a2a18, #140d07 75%);
         z-index: 10;
       }
       #card {
         text-align: center;
         max-width: 560px;
         padding: 36px 40px;
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        border-radius: 20px;
-        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(240, 161, 60, 0.35);
+        border-radius: 8px;
+        backdrop-filter: blur(6px);
       }
       #card h1 {
         margin: 0 0 6px;
-        font-size: 34px;
-        letter-spacing: -0.01em;
+        font-family: "Anton", "Barlow Condensed", sans-serif;
+        font-size: 44px;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        color: #f0a13c;
+        text-shadow: 3px 3px 0 #000;
       }
       #card p {
         margin: 0 0 22px;
-        color: rgba(255, 255, 255, 0.75);
+        color: rgba(255, 246, 228, 0.8);
         line-height: 1.6;
+        font-size: 17px;
       }
       #start {
         pointer-events: auto;
         cursor: pointer;
-        font: inherit;
-        font-size: 16px;
-        font-weight: 600;
-        color: #0b1219;
-        background: #e9e2d3;
-        border: none;
-        border-radius: 999px;
-        padding: 13px 30px;
+        font-family: "Anton", "Barlow Condensed", sans-serif;
+        font-size: 19px;
+        letter-spacing: 0.05em;
+        color: #1c1106;
+        background: #f0a13c;
+        border: 2px solid #000;
+        border-radius: 4px;
+        padding: 12px 30px;
+        box-shadow: 0 3px 0 #000;
         transition: transform 0.12s ease, background 0.12s ease;
       }
       #start:hover {
         transform: translateY(-1px);
-        background: #fff;
+        background: #ffb95a;
       }
       #credit {
         margin-top: 20px;
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.45);
+        font-size: 13px;
+        color: rgba(255, 246, 228, 0.45);
       }
       #loading {
         position: fixed;
@@ -186,10 +205,11 @@
     </div>
     <div id="overlay">
       <div id="card">
-        <h1>Gregorovce 3D</h1>
+        <h1>GREGOROVCE</h1>
         <p>
-          Virtuálna prechádzka obcou Gregorovce (okres Prešov) postavená z reálnych
-          dát OpenStreetMap a výškového modelu. Pohybuj sa ako v hre.
+          San Andreas edícia virtuálnej prechádzky obcou Gregorovce (okres Prešov).
+          Svet z reálnych dát OpenStreetMap a výškového modelu, prelisený teplým
+          kalifornským smogom. Pohybuj sa ako v hre.
         </p>
         <button id="start">Vstúpiť do sveta</button>
         <div id="credit">

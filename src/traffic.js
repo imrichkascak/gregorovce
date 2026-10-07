@@ -2,9 +2,10 @@
 import * as THREE from 'three';
 import { roadWidth, isPaved } from './osm.js';
 
-const CAR_COLORS = ['#c0392b', '#2c3e50', '#ecf0f1', '#2980b9', '#27ae60', '#7f8c8d', '#d35400'];
-const SHIRT_COLORS = ['#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#d35400', '#2c3e50', '#16a085'];
-const PANTS_COLORS = ['#34495e', '#2c3e50', '#5d4037', '#37474f'];
+// Muted, dusty palette straight out of Los Santos.
+const CAR_COLORS = ['#a8342c', '#3a4250', '#d8d0be', '#3f6e9e', '#5a7a42', '#8a8578', '#b8722e'];
+const SHIRT_COLORS = ['#a8342c', '#3f6e9e', '#5a7a42', '#6e4a7a', '#b8722e', '#3a4250', '#2f7a70'];
+const PANTS_COLORS = ['#4a4a3e', '#3a4250', '#5d4632', '#464e44'];
 
 const DRIVABLE = new Set([
   'residential',

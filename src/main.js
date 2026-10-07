@@ -103,13 +103,13 @@ function drawMinimap(context, geoRef, osm, scale) {
     ((z + size.z / 2) / size.z) * height,
   ];
   context.clearRect(0, 0, width, height);
-  context.fillStyle = '#3d5a2e';
+  context.fillStyle = '#b5b98a';
   context.fillRect(0, 0, width, height);
   context.save();
   context.scale(scale, scale);
 
-  context.strokeStyle = '#2b4a1f';
-  context.fillStyle = '#2b4a1f';
+  context.strokeStyle = '#6a7540';
+  context.fillStyle = '#6a7540';
   for (const forest of osm.forests) {
     context.beginPath();
     forest.latlon.forEach((p, i) => {
@@ -121,7 +121,7 @@ function drawMinimap(context, geoRef, osm, scale) {
     context.fill();
   }
 
-  context.fillStyle = '#c9c2b4';
+  context.fillStyle = '#96917e';
   for (const building of osm.buildings) {
     context.beginPath();
     building.latlon.forEach((p, i) => {
@@ -133,8 +133,8 @@ function drawMinimap(context, geoRef, osm, scale) {
     context.fill();
   }
 
-  context.strokeStyle = '#4a4a4a';
-  context.lineWidth = 1;
+  context.strokeStyle = '#e0d9c2';
+  context.lineWidth = 1.6;
   for (const road of osm.roads) {
     context.beginPath();
     road.latlon.forEach((p, i) => {
@@ -146,8 +146,8 @@ function drawMinimap(context, geoRef, osm, scale) {
     context.stroke();
   }
 
-  context.strokeStyle = '#3f7fbf';
-  context.lineWidth = 1;
+  context.strokeStyle = '#5f9a8f';
+  context.lineWidth = 1.4;
   for (const water of osm.waterways) {
     context.beginPath();
     water.latlon.forEach((p, i) => {
@@ -160,7 +160,7 @@ function drawMinimap(context, geoRef, osm, scale) {
   }
 
   for (const area of osm.leisure) {
-    context.fillStyle = area.tags.leisure === 'pitch' ? '#4e9a3a' : '#c2a468';
+    context.fillStyle = area.tags.leisure === 'pitch' ? '#7a9a4f' : '#c9b26a';
     context.beginPath();
     area.latlon.forEach((p, i) => {
       const w = geoRef.toWorld(p.lat, p.lon);
@@ -184,7 +184,10 @@ function drawPlayerMarker() {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(-player.yaw);
-  ctx.fillStyle = '#ff3b30';
+  // GTA radar blip: white arrow with a black outline.
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(0, -7);
   ctx.lineTo(5, 6);
@@ -192,6 +195,7 @@ function drawPlayerMarker() {
   ctx.lineTo(-5, 6);
   ctx.closePath();
   ctx.fill();
+  ctx.stroke();
   ctx.restore();
 }
 

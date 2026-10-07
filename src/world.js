@@ -9,16 +9,17 @@ import { buildBuildings } from './buildings.js';
 import { buildLabels } from './labels.js';
 import { createTraffic } from './traffic.js';
 
-const HORIZON = new THREE.Color('#bcd4e6');
+// GTA: San Andreas mood — warm smog haze, dry olive vegetation, amber sun.
+const HORIZON = new THREE.Color('#dfc193');
 const SUN_DIR = new THREE.Vector3(-0.42, 0.58, 0.7).normalize();
 
-const GRASS_LOW = new THREE.Color('#6f8f43');
-const GRASS_HIGH = new THREE.Color('#55703a');
-const ROCK = new THREE.Color('#6b6152');
-const FOREST_FLOOR = new THREE.Color('#33471f');
-const FIELD = new THREE.Color('#a8a860');
+const GRASS_LOW = new THREE.Color('#9d9a52');
+const GRASS_HIGH = new THREE.Color('#6f7a3c');
+const ROCK = new THREE.Color('#8a7a60');
+const FOREST_FLOOR = new THREE.Color('#4a4f26');
+const FIELD = new THREE.Color('#c2b06a');
 
-const TREE_COLORS = ['#3f6b2e', '#4a7a34', '#365f27', '#557f3b'];
+const TREE_COLORS = ['#5a6e2e', '#6d7c35', '#49591f', '#7f8a41'];
 
 function hash(n) {
   let x = Math.sin(n * 127.1) * 43758.5453;
@@ -295,23 +296,23 @@ function buildRoads(geo, roads) {
   add(
     paved,
     new THREE.MeshStandardMaterial(
-      overlay({ color: '#333438', roughness: 0.95, metalness: 0.05 }),
+      overlay({ color: '#46443c', roughness: 0.95, metalness: 0.05 }),
     ),
   );
   add(
     unpaved,
-    new THREE.MeshStandardMaterial(overlay({ color: '#7a6248', roughness: 1, metalness: 0 })),
+    new THREE.MeshStandardMaterial(overlay({ color: '#8a7354', roughness: 1, metalness: 0 })),
   );
   add(
     sidewalks,
     new THREE.MeshStandardMaterial(
-      overlay({ color: '#a8a49a', roughness: 1, metalness: 0 }),
+      overlay({ color: '#b0a68c', roughness: 1, metalness: 0 }),
     ),
   );
   add(
     markings,
     new THREE.MeshStandardMaterial(
-      overlay({ color: '#e8e4d8', roughness: 0.9, metalness: 0, side: THREE.DoubleSide }),
+      overlay({ color: '#e6d9b0', roughness: 0.9, metalness: 0, side: THREE.DoubleSide }),
     ),
   );
   return group;
@@ -333,11 +334,11 @@ function buildWater(geo, waterways) {
     const mesh = new THREE.Mesh(
       mergeGeometries(geoms, false),
       new THREE.MeshStandardMaterial({
-        color: '#2f6f9e',
-        roughness: 0.25,
-        metalness: 0.15,
+        color: '#3f7a6a',
+        roughness: 0.3,
+        metalness: 0.1,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.88,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -1,
@@ -396,7 +397,7 @@ function buildLeisure(geo, areas, roads) {
     for (let i = 0; i < pos.count; i += 1) {
       pos.setY(i, geo.heightAt(pos.getX(i), pos.getZ(i)) + 0.07);
     }
-    setUniformColor(geom, new THREE.Color(isPitch ? '#3f7a34' : '#c2a468'));
+    setUniformColor(geom, new THREE.Color(isPitch ? '#4f7a3a' : '#c9b06a'));
     patches.push(geom);
 
     if (isPitch) {
@@ -462,7 +463,7 @@ function buildLeisure(geo, areas, roads) {
   add(
     lines,
     new THREE.MeshStandardMaterial({
-      color: '#f2f0e6',
+      color: '#efe6c8',
       roughness: 0.9,
       metalness: 0,
       side: THREE.DoubleSide,
@@ -474,7 +475,7 @@ function buildLeisure(geo, areas, roads) {
   add(
     paths,
     new THREE.MeshStandardMaterial({
-      color: '#8a7358',
+      color: '#96805f',
       roughness: 1,
       metalness: 0,
       polygonOffset: true,
@@ -569,10 +570,10 @@ function buildSky() {
     side: THREE.BackSide,
     depthWrite: false,
     uniforms: {
-      topColor: { value: new THREE.Color('#2f6fb5') },
+      topColor: { value: new THREE.Color('#7fa6c2') },
       horizonColor: { value: HORIZON.clone() },
       sunDirection: { value: SUN_DIR.clone() },
-      sunColor: { value: new THREE.Color('#fff2c4') },
+      sunColor: { value: new THREE.Color('#ffd98c') },
     },
     vertexShader: `
       varying vec3 vWorldPosition;
@@ -591,9 +592,11 @@ function buildSky() {
       void main() {
         vec3 dir = normalize(vWorldPosition);
         float h = clamp(dir.y, 0.0, 1.0);
-        vec3 color = mix(horizonColor, topColor, pow(h, 0.55));
-        float sun = pow(max(dot(dir, normalize(sunDirection)), 0.0), 220.0);
-        color += sunColor * sun * 0.9;
+        vec3 color = mix(horizonColor, topColor, pow(h, 0.45));
+        float sunDot = max(dot(dir, normalize(sunDirection)), 0.0);
+        float sun = pow(sunDot, 160.0);
+        float glow = pow(sunDot, 9.0);
+        color += sunColor * (sun * 1.0 + glow * 0.28);
         gl_FragColor = vec4(color, 1.0);
       }
     `,
@@ -605,14 +608,14 @@ function buildSky() {
 
 export function createWorld(scene, geo, layers) {
   scene.background = HORIZON.clone();
-  scene.fog = new THREE.Fog(HORIZON.clone(), 500, 4200);
+  scene.fog = new THREE.Fog(HORIZON.clone(), 350, 3200);
 
   scene.add(buildSky());
 
-  const hemi = new THREE.HemisphereLight('#bcd6ee', '#3a4a2a', 0.75);
+  const hemi = new THREE.HemisphereLight('#d8d2b8', '#6b5f43', 0.85);
   scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight('#fff1d0', 2.1);
+  const sun = new THREE.DirectionalLight('#ffd9a3', 2.4);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.near = 10;

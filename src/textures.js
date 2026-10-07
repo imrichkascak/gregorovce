@@ -11,23 +11,23 @@ export function facadeTexture() {
   canvas.height = height;
   const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#f2efe6';
+  ctx.fillStyle = '#efe6cc';
   ctx.fillRect(0, 0, width, height);
 
-  ctx.fillStyle = 'rgba(0,0,0,0.07)';
+  ctx.fillStyle = 'rgba(90,70,40,0.1)';
   ctx.fillRect(0, height - 10, width, 10);
 
   const winW = 46;
   const winH = 40;
   const x = (width - winW) / 2;
   const y = (height - winH) / 2 - 4;
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#f2ead0';
   ctx.fillRect(x - 3, y - 3, winW + 6, winH + 6);
-  ctx.fillStyle = '#59636f';
+  ctx.fillStyle = '#4e5a66';
   ctx.fillRect(x, y, winW, winH);
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.fillStyle = 'rgba(255,240,200,0.22)';
   ctx.fillRect(x, y, winW, winH * 0.4);
-  ctx.strokeStyle = '#f4f1e8';
+  ctx.strokeStyle = '#f2ead0';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(x + winW / 2, y);
