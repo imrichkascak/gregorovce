@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gregorovce: San Andreas</title>
+    <title>Gregorovce 3D — virtuálna prechádzka</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -47,42 +47,82 @@
       #overlay.hidden {
         display: none;
       }
-      #panel {
+      #gta-hud {
         position: absolute;
         right: 16px;
         top: 16px;
-        background: rgba(10, 8, 6, 0.45);
-        border: 1px solid rgba(0, 0, 0, 0.55);
-        outline: 1px solid rgba(255, 214, 140, 0.25);
-        border-radius: 4px;
-        padding: 12px 14px;
-        font-size: 15px;
-        line-height: 1.7;
-        min-width: 210px;
-        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
-      }
-      #panel h2 {
-        margin: 0 0 6px;
-        font-family: "Anton", "Barlow Condensed", sans-serif;
-        font-size: 20px;
-        font-weight: 400;
-        letter-spacing: 0.03em;
-        color: #f0a13c;
-        text-shadow: 2px 2px 0 #000;
-      }
-      #panel .row {
         display: flex;
-        justify-content: space-between;
-        gap: 16px;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 5px;
+        pointer-events: none;
+        text-shadow:
+          1px 1px 0 #000,
+          -1px 1px 0 #000,
+          1px -1px 0 #000,
+          -1px -1px 0 #000,
+          2px 2px 2px rgba(0, 0, 0, 0.55);
       }
-      #panel .label {
-        opacity: 0.65;
+      #stars {
+        font-size: 21px;
+        letter-spacing: 3px;
+        color: #9a9a9a;
+      }
+      #status-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #weapon-slot {
+        width: 46px;
+        height: 46px;
+        display: grid;
+        place-items: center;
+        background: rgba(10, 8, 6, 0.45);
+        border: 2px solid rgba(0, 0, 0, 0.8);
+        outline: 1px solid rgba(255, 214, 140, 0.3);
+        border-radius: 8px;
+      }
+      #clock {
+        font-family: "Anton", "Barlow Condensed", sans-serif;
+        font-size: 27px;
+        color: #fff;
+      }
+      #stamina {
+        width: 156px;
+        height: 14px;
+        background: rgba(10, 8, 6, 0.55);
+        border: 2px solid #000;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      #stamina-fill {
+        width: 100%;
+        height: 100%;
+        background: #b4191d;
+      }
+      #money {
+        font-family: "Anton", "Barlow Condensed", sans-serif;
+        font-size: 27px;
+        color: #43a13c;
+      }
+      #radar-wrap {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      #info {
+        font-size: 14px;
+        opacity: 0.9;
+        text-shadow: 1px 1px 0 #000;
       }
       #minimap {
         display: block;
         width: 200px;
         height: 200px;
-        margin-top: 10px;
         /* GTA radar: circular, thick black frame */
         border-radius: 50%;
         border: 3px solid #000;
@@ -91,7 +131,7 @@
       }
       #keys {
         position: absolute;
-        left: 16px;
+        right: 16px;
         bottom: 16px;
         background: rgba(10, 8, 6, 0.45);
         border: 1px solid rgba(0, 0, 0, 0.55);
@@ -190,11 +230,24 @@
   <body>
     <div id="crosshair"></div>
     <div id="hud" class="hidden">
-      <div id="panel">
-        <h2>Gregorovce</h2>
-        <div class="row"><span class="label">Poloha</span><span id="coords">—</span></div>
-        <div class="row"><span class="label">Rýchlosť</span><span id="speed">0 m/s</span></div>
-        <div class="row"><span class="label">Režim</span><span id="mode">Chôdza</span></div>
+      <div id="gta-hud">
+        <div id="stars">★★★★★★</div>
+        <div id="status-row">
+          <div id="weapon-slot" title="Lupa">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#f2ead0" stroke-width="2.4" stroke-linecap="round" aria-label="Lupa">
+              <circle cx="10.5" cy="10.5" r="6.5" />
+              <line x1="15.5" y1="15.5" x2="21" y2="21" />
+            </svg>
+          </div>
+          <div id="clock">--:--</div>
+        </div>
+        <div id="stamina" title="Stamina"><div id="stamina-fill"></div></div>
+        <div id="money">€00000350</div>
+      </div>
+      <div id="radar-wrap">
+        <div id="info">
+          <span id="coords">—</span> · <span id="speed">0 m/s</span> · <span id="mode">Let (F)</span>
+        </div>
         <canvas id="minimap" width="200" height="200"></canvas>
       </div>
       <div id="keys">
@@ -207,9 +260,9 @@
       <div id="card">
         <h1>GREGOROVCE</h1>
         <p>
-          San Andreas edícia virtuálnej prechádzky obcou Gregorovce (okres Prešov).
-          Svet z reálnych dát OpenStreetMap a výškového modelu, prelisený teplým
-          kalifornským smogom. Pohybuj sa ako v hre.
+          Virtuálna prechádzka obcou Gregorovce (okres Prešov). Svet z reálnych
+          dát OpenStreetMap a výškového modelu, prelisený teplým kalifornskym
+          smogom. Pohybuj sa ako v hre.
         </p>
         <button id="start">Vstúpiť do sveta</button>
         <div id="credit">

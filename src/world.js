@@ -9,7 +9,8 @@ import { buildBuildings } from './buildings.js';
 import { buildLabels } from './labels.js';
 import { createTraffic } from './traffic.js';
 
-// GTA: San Andreas mood — warm smog haze, dry olive vegetation, amber sun.
+// Classic open-world crime game mood — warm smog haze, dry olive vegetation,
+// amber sun.
 const HORIZON = new THREE.Color('#dfc193');
 const SUN_DIR = new THREE.Vector3(-0.42, 0.58, 0.7).normalize();
 

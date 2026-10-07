@@ -33,7 +33,7 @@ export class Player {
     this.yaw = 0;
     this.pitch = 0;
     this.grounded = true;
-    this.flying = false;
+    this.flying = true;
     this.currentSpeed = 0;
     this.keys = new Set();
     this.sensitivity = LOOK_SENSITIVITY;

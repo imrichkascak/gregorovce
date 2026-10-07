@@ -81,6 +81,8 @@ const hud = document.getElementById('hud');
 const coords = document.getElementById('coords');
 const speedLabel = document.getElementById('speed');
 const modeLabel = document.getElementById('mode');
+const clockLabel = document.getElementById('clock');
+const staminaFill = document.getElementById('stamina-fill');
 
 startButton.addEventListener('click', () => player.lock());
 player.onLockChange = (locked) => {
@@ -201,11 +203,30 @@ function drawPlayerMarker() {
 
 const clock = new THREE.Clock();
 
+// Decorative stamina: drains while sprinting on foot, refills otherwise.
+let stamina = 1;
+let lastMinute = -1;
+
+function updateHudStats(dt) {
+  const now = new Date();
+  if (now.getMinutes() !== lastMinute) {
+    lastMinute = now.getMinutes();
+    clockLabel.textContent = now.toLocaleTimeString('sk-SK', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+  const sprinting = !player.flying && player.currentSpeed > 30;
+  stamina = THREE.MathUtils.clamp(stamina + (sprinting ? -0.06 : 0.15) * dt, 0, 1);
+  staminaFill.style.width = `${stamina * 100}%`;
+}
+
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   player.update(dt);
   world.update(player.position, dt);
   drawPlayerMarker();
+  updateHudStats(dt);
 
   const here = geo.toLatLon(player.position.x, player.position.z);
   coords.textContent = `${here.lat.toFixed(5)}, ${here.lon.toFixed(5)}`;

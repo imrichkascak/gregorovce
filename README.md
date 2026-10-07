@@ -4,7 +4,7 @@ Interaktívna 3D vizualizácia obce **Gregorovce** (okres Prešov) v prehliadač
 prechádzka svetom ako v hre. Terén, budovy, cesty, potoky a lesy sú postavené
 z reálnych otvorených dát.
 
-Vizuálny štýl je ladený do teplej, zahmlenej estetiky **GTA: San Andreas** —
+Vizuálny štýl je ladený do teplej, zahmlenej estetiky klasických akčných hier —
 suchá olivová vegetácia, pieskové fasády s terakotovými strechami, jantárové
 slnko, smogová hmla a kruhový radar v HUD.
 
