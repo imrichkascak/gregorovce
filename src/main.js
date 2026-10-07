@@ -84,11 +84,136 @@ const modeLabel = document.getElementById('mode');
 const clockLabel = document.getElementById('clock');
 const staminaFill = document.getElementById('stamina-fill');
 
+// World data and scene are built — enable PLAY and finish the loading bar.
+startButton.disabled = false;
+overlay.classList.add('ready');
+
 startButton.addEventListener('click', () => player.lock());
 player.onLockChange = (locked) => {
   overlay.classList.toggle('hidden', locked);
   hud.classList.toggle('hidden', !locked);
 };
+
+// Touch controls (phones/tablets): floating joystick on the left, look drag on
+// the right, action buttons bottom-right.
+if (player.touchMode) {
+  document.body.classList.add('touch');
+  const layer = document.getElementById('touch-layer');
+  const base = document.getElementById('joystick-base');
+  const knob = document.getElementById('joystick-knob');
+  const btnDown = document.getElementById('btn-down');
+  const joystickRadius = 55;
+  let moveId = null;
+  let moveOrigin = null;
+  let lookId = null;
+  let lookLast = null;
+
+  const capture = (element, event) => {
+    try {
+      element.setPointerCapture(event.pointerId);
+    } catch {
+      // Synthetic or already-released pointer — not fatal.
+    }
+  };
+
+  layer.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('.tb')) return;
+    capture(layer, event);
+    if (moveId === null && event.clientX < window.innerWidth * 0.45) {
+      moveId = event.pointerId;
+      moveOrigin = { x: event.clientX, y: event.clientY };
+      base.style.display = 'block';
+      base.style.left = `${event.clientX - base.offsetWidth / 2}px`;
+      base.style.top = `${event.clientY - base.offsetHeight / 2}px`;
+      knob.style.transform = 'translate(-50%, -50%)';
+    } else if (lookId === null) {
+      lookId = event.pointerId;
+      lookLast = { x: event.clientX, y: event.clientY };
+    }
+  });
+  layer.addEventListener('pointermove', (event) => {
+    if (event.pointerId === moveId && moveOrigin) {
+      let dx = event.clientX - moveOrigin.x;
+      let dy = event.clientY - moveOrigin.y;
+      const len = Math.hypot(dx, dy);
+      if (len > joystickRadius) {
+        dx = (dx / len) * joystickRadius;
+        dy = (dy / len) * joystickRadius;
+      }
+      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      let jx = dx / joystickRadius;
+      let jy = -dy / joystickRadius;
+      if (Math.hypot(jx, jy) < 0.15) {
+        jx = 0;
+        jy = 0;
+      }
+      player.touchMove.x = jx;
+      player.touchMove.y = jy;
+    } else if (event.pointerId === lookId && lookLast) {
+      const sens = player.sensitivity * 1.7;
+      player.yaw -= (event.clientX - lookLast.x) * sens;
+      player.pitch = THREE.MathUtils.clamp(
+        player.pitch - (event.clientY - lookLast.y) * sens,
+        -1.45,
+        1.45,
+      );
+      lookLast = { x: event.clientX, y: event.clientY };
+    }
+  });
+  const releasePointer = (event) => {
+    if (event.pointerId === moveId) {
+      moveId = null;
+      moveOrigin = null;
+      player.touchMove.x = 0;
+      player.touchMove.y = 0;
+      base.style.display = 'none';
+    }
+    if (event.pointerId === lookId) {
+      lookId = null;
+      lookLast = null;
+    }
+  };
+  layer.addEventListener('pointerup', releasePointer);
+  layer.addEventListener('pointercancel', releasePointer);
+
+  const bindHold = (id, onDown, onUp) => {
+    const el = document.getElementById(id);
+    el.addEventListener('pointerdown', (event) => {
+      event.stopPropagation();
+      capture(el, event);
+      onDown();
+    });
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+  };
+  bindHold(
+    'btn-jump',
+    () => {
+      player.touchUp = 1;
+    },
+    () => {
+      player.touchUp = 0;
+    },
+  );
+  bindHold(
+    'btn-down',
+    () => {
+      player.touchUp = -1;
+    },
+    () => {
+      player.touchUp = 0;
+    },
+  );
+  document.getElementById('btn-fly').addEventListener('pointerdown', (event) => {
+    event.stopPropagation();
+    player.flying = !player.flying;
+    btnDown.classList.toggle('hidden', !player.flying);
+  });
+  document.getElementById('btn-menu').addEventListener('pointerdown', (event) => {
+    event.stopPropagation();
+    player.pause();
+  });
+}
 
 // Static top-down minimap drawn once, with a live player marker on top.
 const minimap = document.createElement('canvas');

@@ -31,6 +31,11 @@ Otvor `http://localhost:5173` a klikni na **Vstúpiť do sveta**.
 | `F` | prepni režim chôdza / let |
 | `Esc` | uvoľnenie myši |
 
+**Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
+plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
+tlačidlá `SKOK` / `↓` / `LET` vpravo dole ovládajú skok a lietanie, `MENU`
+vľavo hore sa vráti do menu.
+
 ## Ako to funguje
 
 Dáta sa sťahujú raz a ukladajú do `data/`:

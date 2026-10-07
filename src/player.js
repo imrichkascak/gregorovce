@@ -37,6 +37,10 @@ export class Player {
     this.currentSpeed = 0;
     this.keys = new Set();
     this.sensitivity = LOOK_SENSITIVITY;
+    // Phones/tablets: no pointer lock — start directly and use touch controls.
+    this.touchMode = window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
+    this.touchMove = { x: 0, y: 0 };
+    this.touchUp = 0;
 
     document.addEventListener('keydown', (event) => {
       this.keys.add(event.code);
@@ -57,8 +61,21 @@ export class Player {
   }
 
   lock() {
+    if (this.touchMode || typeof document.body.requestPointerLock !== 'function') {
+      if (this.onLockChange) this.onLockChange(true);
+      return;
+    }
     const result = document.body.requestPointerLock();
     if (result && typeof result.catch === 'function') result.catch(() => {});
+  }
+
+  /** Returns to the menu (used by the touch MENU button). */
+  pause() {
+    this.keys.clear();
+    this.touchMove.x = 0;
+    this.touchMove.y = 0;
+    this.touchUp = 0;
+    if (this.onLockChange) this.onLockChange(false);
   }
 
   spawn(x, z) {
@@ -90,12 +107,14 @@ export class Player {
   }
 
   update(dt) {
-    const forward =
+    const keyForward =
       (this.keys.has('KeyW') || this.keys.has('ArrowUp') ? 1 : 0) -
       (this.keys.has('KeyS') || this.keys.has('ArrowDown') ? 1 : 0);
-    const strafe =
+    const keyStrafe =
       (this.keys.has('KeyD') || this.keys.has('ArrowRight') ? 1 : 0) -
       (this.keys.has('KeyA') || this.keys.has('ArrowLeft') ? 1 : 0);
+    const forward = THREE.MathUtils.clamp(keyForward + this.touchMove.y, -1, 1);
+    const strafe = THREE.MathUtils.clamp(keyStrafe + this.touchMove.x, -1, 1);
     const running = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
     const speed = this.flying
       ? running
@@ -130,7 +149,13 @@ export class Player {
     this.position.z = THREE.MathUtils.clamp(this.position.z, -halfZ, halfZ);
 
     if (this.flying) {
-      const up = (this.keys.has('Space') ? 1 : 0) - (this.keys.has('ControlLeft') ? 1 : 0);
+      const up = THREE.MathUtils.clamp(
+        (this.keys.has('Space') ? 1 : 0) -
+          (this.keys.has('ControlLeft') ? 1 : 0) +
+          this.touchUp,
+        -1,
+        1,
+      );
       this.position.y += up * FLY_VERTICAL_SPEED * dt;
     } else {
       this.velocityY -= GRAVITY * dt;
@@ -143,7 +168,7 @@ export class Player {
       } else {
         this.grounded = false;
       }
-      if (this.grounded && this.keys.has('Space')) {
+      if (this.grounded && (this.keys.has('Space') || this.touchUp > 0)) {
         this.velocityY = JUMP_SPEED;
         this.grounded = false;
       }
