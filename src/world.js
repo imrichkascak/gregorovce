@@ -9,20 +9,19 @@ import { buildBuildings } from './buildings.js';
 import { buildLabels } from './labels.js';
 import { createTraffic } from './traffic.js';
 import { createVillageGags } from './gags.js';
-import { speechBubbleTexture } from './textures.js';
+import { asphaltTexture, speechBubbleTexture } from './textures.js';
 
-// Classic open-world crime game mood — warm smog haze, dry olive vegetation,
-// amber sun.
-const HORIZON = new THREE.Color('#dfc193');
-const SUN_DIR = new THREE.Vector3(-0.42, 0.58, 0.7).normalize();
+// San Andreas daylight: pale blue sky, dusty warm horizon, dry yellow lawns.
+const HORIZON = new THREE.Color('#e7d3b0');
+const SUN_DIR = new THREE.Vector3(-0.35, 0.72, 0.55).normalize();
 
-const GRASS_LOW = new THREE.Color('#9d9a52');
-const GRASS_HIGH = new THREE.Color('#6f7a3c');
-const ROCK = new THREE.Color('#8a7a60');
-const FOREST_FLOOR = new THREE.Color('#4a4f26');
-const FIELD = new THREE.Color('#c2b06a');
+const GRASS_LOW = new THREE.Color('#c2b86e');
+const GRASS_HIGH = new THREE.Color('#6f8f38');
+const ROCK = new THREE.Color('#b5a48c');
+const FOREST_FLOOR = new THREE.Color('#6d7a3c');
+const FIELD = new THREE.Color('#d4c06e');
 
-const TREE_COLORS = ['#5a6e2e', '#6d7c35', '#49591f', '#7f8a41'];
+const PALM_COLORS = ['#2f6b34', '#3d7a3c', '#4a8a46', '#356838'];
 
 function hash(n) {
   let x = Math.sin(n * 127.1) * 43758.5453;
@@ -88,8 +87,10 @@ function buildTerrain(geo) {
 
 function buildRibbon(geo, points, width, yOffset) {
   const positions = [];
+  const uvs = [];
   const indices = [];
   const half = width / 2;
+  let travelled = 0;
 
   for (let i = 0; i < points.length; i += 1) {
     const prev = points[Math.max(0, i - 1)];
@@ -106,8 +107,13 @@ function buildRibbon(geo, points, width, yOffset) {
     const lz = points[i].z + pz * half;
     const rx = points[i].x - px * half;
     const rz = points[i].z - pz * half;
+    if (i > 0) {
+      travelled += Math.hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z);
+    }
+    const v = travelled / 6;
     positions.push(lx, geo.heightAt(lx, lz) + yOffset, lz);
     positions.push(rx, geo.heightAt(rx, rz) + yOffset, rz);
+    uvs.push(0, v, 1, v);
 
     if (i > 0) {
       const a = (i - 1) * 2;
@@ -117,6 +123,7 @@ function buildRibbon(geo, points, width, yOffset) {
 
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geom.setIndex(indices);
   geom.computeVertexNormals();
   return geom;
@@ -241,11 +248,14 @@ function dashGeometry(geo, points, dashLength, gapLength, width, yOffset) {
   return geom;
 }
 
+const STREET = ['primary', 'secondary', 'tertiary', 'residential', 'living_street', 'unclassified'];
+
 function buildRoads(geo, roads) {
   const paved = [];
   const unpaved = [];
   const sidewalks = [];
   const markings = [];
+  const curbs = [];
 
   for (const r of roads) {
     const points = conformToTerrainGrid(
@@ -263,12 +273,7 @@ function buildRoads(geo, roads) {
     );
 
     const isMain = ['primary', 'secondary', 'tertiary'].includes(kind);
-    if (
-      ['primary', 'secondary', 'tertiary', 'residential', 'living_street', 'unclassified'].includes(
-        kind,
-      ) &&
-      length > 30
-    ) {
+    if (STREET.includes(kind) && length > 30) {
       const offset = width / 2 + (isMain ? 1.15 : 0.85);
       const sidewalkWidth = isMain ? 1.8 : 1.5;
       sidewalks.push(
@@ -276,9 +281,17 @@ function buildRoads(geo, roads) {
         buildRibbon(geo, offsetPolyline(points, -offset), sidewalkWidth, 0.115),
       );
     }
-    if (isMain && length > 30) {
-      const dash = dashGeometry(geo, points, 3.2, 5.5, 0.2, 0.13);
-      if (dash) markings.push(dash);
+    // Double yellow center line and red curbs, the Grove Street read.
+    if (isPaved(r.tags) && STREET.includes(kind) && length > 40) {
+      for (const side of [0.16, -0.16]) {
+        const line = dashGeometry(geo, offsetPolyline(points, side), 80, 0, 0.11, 0.14);
+        if (line) markings.push(line);
+      }
+      const edge = width / 2 - 0.14;
+      curbs.push(
+        buildRibbon(geo, offsetPolyline(points, edge), 0.26, 0.125),
+        buildRibbon(geo, offsetPolyline(points, -edge), 0.26, 0.125),
+      );
     }
   }
 
@@ -299,23 +312,36 @@ function buildRoads(geo, roads) {
   add(
     paved,
     new THREE.MeshStandardMaterial(
-      overlay({ color: '#46443c', roughness: 0.95, metalness: 0.05 }),
+      overlay({ map: asphaltTexture(), color: '#ffffff', roughness: 0.92, metalness: 0.02 }),
     ),
   );
   add(
     unpaved,
-    new THREE.MeshStandardMaterial(overlay({ color: '#8a7354', roughness: 1, metalness: 0 })),
+    new THREE.MeshStandardMaterial(overlay({ color: '#b89a6e', roughness: 1, metalness: 0 })),
   );
   add(
     sidewalks,
     new THREE.MeshStandardMaterial(
-      overlay({ color: '#b0a68c', roughness: 1, metalness: 0 }),
+      overlay({ color: '#d5cfc3', roughness: 0.95, metalness: 0 }),
+    ),
+  );
+  add(
+    curbs,
+    new THREE.MeshStandardMaterial(
+      overlay({ color: '#d25532', roughness: 0.85, metalness: 0 }),
     ),
   );
   add(
     markings,
     new THREE.MeshStandardMaterial(
-      overlay({ color: '#e6d9b0', roughness: 0.9, metalness: 0, side: THREE.DoubleSide }),
+      overlay({
+        color: '#e6c84a',
+        roughness: 0.7,
+        metalness: 0,
+        side: THREE.DoubleSide,
+        polygonOffsetFactor: -6,
+        polygonOffsetUnits: -6,
+      }),
     ),
   );
   return group;
@@ -337,7 +363,7 @@ function buildWater(geo, waterways) {
     const mesh = new THREE.Mesh(
       mergeGeometries(geoms, false),
       new THREE.MeshStandardMaterial({
-        color: '#3f7a6a',
+        color: '#6a90a6',
         roughness: 0.3,
         metalness: 0.1,
         transparent: true,
@@ -526,14 +552,13 @@ function buildTrees(geo, forestPolygons) {
   group.name = 'trees';
   if (!spots.length) return group;
 
-  const trunkGeom = new THREE.CylinderGeometry(0.18, 0.26, 2.4, 6);
-  trunkGeom.translate(0, 1.2, 0);
-  const foliageGeom = new THREE.ConeGeometry(1.5, 4.6, 7);
-  foliageGeom.translate(0, 4.2, 0);
+  const trunkGeom = new THREE.CylinderGeometry(0.13, 0.2, 5.4, 5);
+  trunkGeom.translate(0, 2.7, 0);
+  const foliageGeom = palmCrownGeometry();
 
   const trunks = new THREE.InstancedMesh(
     trunkGeom,
-    new THREE.MeshStandardMaterial({ color: '#5a4632', roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: '#8a6a48', roughness: 1 }),
     spots.length,
   );
   const foliage = new THREE.InstancedMesh(
@@ -555,15 +580,183 @@ function buildTrees(geo, forestPolygons) {
 
   spots.forEach((spot, i) => {
     quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), spot.r);
-    scale.set(spot.s, spot.s * (0.85 + hash(i) * 0.5), spot.s);
+    const height = 0.75 + hash(i + 3) * 0.55;
+    scale.set(spot.s, height, spot.s);
     matrix.compose(new THREE.Vector3(spot.x, spot.y, spot.z), quat, scale);
     trunks.setMatrixAt(i, matrix);
     foliage.setMatrixAt(i, matrix);
-    color.set(TREE_COLORS[Math.floor(hash(i * 2.7) * TREE_COLORS.length)]);
+    color.set(PALM_COLORS[Math.floor(hash(i * 2.7) * PALM_COLORS.length)]);
     foliage.setColorAt(i, color);
   });
 
   group.add(trunks, foliage);
+  return group;
+}
+
+/** Fan of drooping fronds sitting on top of a palm trunk. */
+function palmCrownGeometry() {
+  const fronds = [];
+  for (let i = 0; i < 8; i += 1) {
+    const frond = new THREE.BoxGeometry(0.9, 0.04, 3.1);
+    frond.translate(0, 0, 1.45);
+    frond.rotateX(0.7);
+    frond.rotateY((i / 8) * Math.PI * 2);
+    fronds.push(frond);
+    const inner = new THREE.BoxGeometry(0.55, 0.04, 2.1);
+    inner.translate(0, 0.05, 0.95);
+    inner.rotateX(0.35);
+    inner.rotateY((i / 8) * Math.PI * 2 + 0.35);
+    fronds.push(inner);
+  }
+  const cap = new THREE.SphereGeometry(0.32, 6, 4);
+  cap.scale(1, 0.5, 1);
+  fronds.push(cap);
+  const geom = mergeGeometries(fronds, false);
+  geom.translate(0, 5.35, 0);
+  return geom;
+}
+
+function walkPolyline(points, spacing, start, visit) {
+  let travelled = 0;
+  let next = start;
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1];
+    const b = points[i];
+    const seg = Math.hypot(b.x - a.x, b.z - a.z);
+    if (seg < 0.05) continue;
+    const tx = (b.x - a.x) / seg;
+    const tz = (b.z - a.z) / seg;
+    while (next <= travelled + seg) {
+      const t = (next - travelled) / seg;
+      visit({
+        x: a.x + (b.x - a.x) * t,
+        z: a.z + (b.z - a.z) * t,
+        tx,
+        tz,
+      });
+      next += spacing;
+    }
+    travelled += seg;
+  }
+}
+
+/** Wooden poles, sagging wires and sidewalk palms along the village streets. */
+function buildStreetKit(geo, roads) {
+  const group = new THREE.Group();
+  group.name = 'street-kit';
+
+  const polePost = new THREE.BoxGeometry(0.16, 6.4, 0.16);
+  polePost.translate(0, 3.2, 0);
+  const poleArm = new THREE.BoxGeometry(1.5, 0.08, 0.08);
+  poleArm.translate(0, 5.9, 0);
+  const poleShape = mergeGeometries([polePost, poleArm], false);
+
+  const poles = [];
+  const wire = [];
+  const palms = [];
+
+  for (const road of roads) {
+    if (!['primary', 'secondary', 'tertiary', 'residential'].includes(road.tags.highway)) continue;
+    const points = conformToTerrainGrid(
+      geo,
+      road.latlon.map((g) => geo.toWorld(g.lat, g.lon)),
+    );
+    if (points.length < 2) continue;
+    const side = roadWidth(road.tags) / 2 + 2.6;
+    let previous = null;
+
+    walkPolyline(points, 36, 14, (p) => {
+      if (poles.length >= 200) return;
+      const x = p.x - p.tz * side;
+      const z = p.z + p.tx * side;
+      const y = geo.heightAt(x, z);
+      const pole = { x, y, z, tx: p.tx, tz: p.tz };
+      if (previous && Math.hypot(x - previous.x, z - previous.z) < 50) {
+        for (const sway of [-0.55, 0.55]) {
+          const ax = previous.x + previous.tz * sway;
+          const az = previous.z - previous.tx * sway;
+          const bx = x + p.tz * sway;
+          const bz = z - p.tx * sway;
+          const ay = previous.y + 5.85;
+          const by = y + 5.85;
+          wire.push(ax, ay, az, (ax + bx) / 2, (ay + by) / 2 - 0.4, (az + bz) / 2);
+          wire.push((ax + bx) / 2, (ay + by) / 2 - 0.4, (az + bz) / 2, bx, by, bz);
+        }
+      }
+      poles.push(pole);
+      previous = pole;
+    });
+
+    walkPolyline(points, 24, 8, (p) => {
+      if (palms.length >= 260) return;
+      const x = p.x + p.tz * side;
+      const z = p.z - p.tx * side;
+      palms.push({
+        x,
+        y: geo.heightAt(x, z),
+        z,
+        s: 0.9 + hash(x * 0.3 + z) * 0.35,
+        r: hash(x + z * 1.7) * Math.PI * 2,
+      });
+    });
+  }
+
+  if (poles.length) {
+    const mesh = new THREE.InstancedMesh(
+      poleShape,
+      new THREE.MeshStandardMaterial({ color: '#6e5844', roughness: 1 }),
+      poles.length,
+    );
+    mesh.castShadow = true;
+    const matrix = new THREE.Matrix4();
+    const quat = new THREE.Quaternion();
+    poles.forEach((pole, i) => {
+      quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(pole.tx, pole.tz));
+      matrix.compose(new THREE.Vector3(pole.x, pole.y, pole.z), quat, new THREE.Vector3(1, 1, 1));
+      mesh.setMatrixAt(i, matrix);
+    });
+    group.add(mesh);
+  }
+
+  if (wire.length) {
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(wire, 3));
+    const lines = new THREE.LineSegments(
+      geom,
+      new THREE.LineBasicMaterial({ color: '#2c2c2c' }),
+    );
+    group.add(lines);
+  }
+
+  if (palms.length) {
+    const trunkGeom = new THREE.CylinderGeometry(0.12, 0.18, 5.2, 5);
+    trunkGeom.translate(0, 2.6, 0);
+    const crownGeom = palmCrownGeometry();
+    const trunks = new THREE.InstancedMesh(
+      trunkGeom,
+      new THREE.MeshStandardMaterial({ color: '#8a6a48', roughness: 1 }),
+      palms.length,
+    );
+    const crowns = new THREE.InstancedMesh(
+      crownGeom,
+      new THREE.MeshStandardMaterial({ color: '#3d7a3c', roughness: 1 }),
+      palms.length,
+    );
+    trunks.castShadow = true;
+    crowns.castShadow = true;
+    const matrix = new THREE.Matrix4();
+    const quat = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+    palms.forEach((palm, i) => {
+      quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), palm.r);
+      scale.set(palm.s, 0.85 + hash(i + 4) * 0.35, palm.s);
+      matrix.compose(new THREE.Vector3(palm.x, palm.y, palm.z), quat, scale);
+      trunks.setMatrixAt(i, matrix);
+      crowns.setMatrixAt(i, matrix);
+    });
+    group.add(trunks, crowns);
+  }
+
   return group;
 }
 
@@ -618,10 +811,10 @@ function buildSky() {
     side: THREE.BackSide,
     depthWrite: false,
     uniforms: {
-      topColor: { value: new THREE.Color('#7fa6c2') },
+      topColor: { value: new THREE.Color('#7eafd6') },
       horizonColor: { value: HORIZON.clone() },
       sunDirection: { value: SUN_DIR.clone() },
-      sunColor: { value: new THREE.Color('#ffd98c') },
+      sunColor: { value: new THREE.Color('#fff2d0') },
     },
     vertexShader: `
       varying vec3 vWorldPosition;
@@ -656,14 +849,14 @@ function buildSky() {
 
 export function createWorld(scene, geo, layers) {
   scene.background = HORIZON.clone();
-  scene.fog = new THREE.Fog(HORIZON.clone(), 350, 3200);
+  scene.fog = new THREE.Fog(HORIZON.clone(), 700, 4800);
 
   scene.add(buildSky());
 
-  const hemi = new THREE.HemisphereLight('#d8d2b8', '#6b5f43', 0.85);
+  const hemi = new THREE.HemisphereLight('#d5e2f2', '#c2ae88', 0.62);
   scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight('#ffd9a3', 2.4);
+  const sun = new THREE.DirectionalLight('#fff4dd', 2.7);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.near = 10;
@@ -679,6 +872,7 @@ export function createWorld(scene, geo, layers) {
 
   scene.add(buildTerrain(geo));
   scene.add(buildRoads(geo, layers.roads));
+  scene.add(buildStreetKit(geo, layers.roads));
   scene.add(buildWater(geo, layers.waterways));
 
   const forest = buildGroundPatches(geo, layers.forests, FOREST_FLOOR);
@@ -751,6 +945,7 @@ export function createWorld(scene, geo, layers) {
     sun,
     npcSpawn: built.npcSpawn,
     gagAnchors: gags.anchors,
+    dropSpawn: gags.anchors.drop ?? null,
     update(anchor, dt) {
       sun.position.copy(anchor).addScaledVector(SUN_DIR, 1400);
       sun.target.position.copy(anchor);

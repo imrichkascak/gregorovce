@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "python3 -m http.server 5173",
+    "test": "node --test",
     "fetch:osm": "node scripts/fetch-osm.mjs data/gregorovce-osm.json",
     "fetch:elevation": "node scripts/fetch-elevation.mjs data/heightmap.json",
     "fetch:all": "npm run fetch:osm && npm run fetch:elevation"

@@ -1,18 +1,15 @@
-// First-person controller: pointer-lock mouse look, WASD movement, gravity and
-// simple building collision. Coordinates are local metric world meters.
+// First-person controller. On foot by default: camera-relative walk with a
+// short run-up and a stop, jump, and a fall from the sky at the spawn point.
+// F switches to fly. Coordinates are local metric world meters.
 import * as THREE from 'three';
 import { pointInPolygon } from './geo.js';
+import { MOTION, stepHorizontal } from './motion.js';
 
 const EYE_HEIGHT = 1.7;
 const PLAYER_RADIUS = 0.5;
-const WALK_SPEED = 16;
-const RUN_SPEED = 45;
-const FLY_SPEED = 80;
-const FLY_RUN_SPEED = 240;
-const FLY_VERTICAL_SPEED = 55;
-const JUMP_SPEED = 9;
-const GRAVITY = 28;
 const LOOK_SENSITIVITY = 0.0022;
+const COYOTE_TIME = 0.12;
+const TERMINAL_VELOCITY = -42;
 
 function distanceToSegment(px, pz, ax, az, bx, bz) {
   const dx = bx - ax;
@@ -29,11 +26,17 @@ export class Player {
     this.geo = geo;
     this.colliders = colliders;
     this.position = new THREE.Vector3();
-    this.velocityY = 0;
+    this.velocity = new THREE.Vector3();
     this.yaw = 0;
-    this.pitch = 0;
-    this.grounded = true;
-    this.flying = true;
+    this.pitch = -0.28;
+    this.spawnYaw = 0;
+    this.grounded = false;
+    this.flying = false;
+    this.started = false;
+    this.sprinting = false;
+    this.stamina = 1;
+    this.coyote = 0;
+    this.jumpHeld = false;
     this.currentSpeed = 0;
     this.keys = new Set();
     this.sensitivity = LOOK_SENSITIVITY;
@@ -44,7 +47,7 @@ export class Player {
 
     document.addEventListener('keydown', (event) => {
       this.keys.add(event.code);
-      if (event.code === 'KeyF') this.flying = !this.flying;
+      if (event.code === 'KeyF') this.setFlying(!this.flying);
       if (event.code === 'KeyR') this.respawn();
       if (event.code === 'Space' || event.code.startsWith('Arrow')) event.preventDefault();
     });
@@ -53,12 +56,19 @@ export class Player {
       if (!this.locked) return;
       this.yaw -= event.movementX * this.sensitivity;
       this.pitch -= event.movementY * this.sensitivity;
-      this.pitch = THREE.MathUtils.clamp(this.pitch, -1.45, 1.45);
+      this.pitch = THREE.MathUtils.clamp(this.pitch, -1.2, 1.2);
     });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement !== null;
       if (this.onLockChange) this.onLockChange(this.locked);
     });
+  }
+
+  setFlying(flying) {
+    if (this.flying === flying) return;
+    this.flying = flying;
+    if (!flying) this.velocity.y = 0;
+    if (this.onFlyingChange) this.onFlyingChange(flying);
   }
 
   lock() {
@@ -79,20 +89,47 @@ export class Player {
     if (this.onLockChange) this.onLockChange(false);
   }
 
-  spawn(x, z) {
+  /** Remember where a fresh drop should land, and face `yaw` on the way down. */
+  setSpawn(x, z, yaw) {
     this.spawnPoint = { x, z };
-    this.position.set(x, this.geo.heightAt(x, z), z);
+    this.spawnYaw = yaw;
+    this.yaw = yaw;
+    this.pitch = -0.55;
+    this.started = false;
+    this.parkAtDrop();
   }
 
-  /** Teleports back to the initial spawn — escape hatch when stuck. */
-  respawn() {
+  parkAtDrop() {
     if (!this.spawnPoint) return;
     const { x, z } = this.spawnPoint;
-    this.position.set(x, this.geo.heightAt(x, z), z);
-    this.velocityY = 0;
+    this.position.set(x, this.geo.heightAt(x, z) + MOTION.dropHeight, z);
+    this.velocity.set(0, 0, 0);
+    this.grounded = false;
+  }
+
+  /**
+   * Drop from above the spawn. Used for the first entrance and for R,
+   * so both land in the same place the same way.
+   */
+  dropFromSky() {
+    if (!this.spawnPoint) return;
+    this.started = true;
+    this.setFlying(false);
+    this.parkAtDrop();
+    this.yaw = this.spawnYaw;
+    this.pitch = -0.55;
+    this.stamina = 1;
+    this.coyote = 0;
+    this.jumpHeld = false;
     this.touchMove.x = 0;
     this.touchMove.y = 0;
     this.touchUp = 0;
+    this.keys.clear();
+  }
+
+  /** @deprecated name kept for the touch reset button. */
+  respawn() {
+    this.dropFromSky();
   }
 
   collides(x, z) {
@@ -114,12 +151,28 @@ export class Player {
       this.position.z += dz;
     } else if (!this.collides(x + dx, z)) {
       this.position.x += dx;
+      this.velocity.z = 0;
     } else if (!this.collides(x, z + dz)) {
       this.position.z += dz;
+      this.velocity.x = 0;
+    } else {
+      this.velocity.x = 0;
+      this.velocity.z = 0;
     }
   }
 
+  writeCamera() {
+    this.camera.position.set(this.position.x, this.position.y + EYE_HEIGHT, this.position.z);
+    this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
+  }
+
   update(dt) {
+    if (!this.started) {
+      this.parkAtDrop();
+      this.writeCamera();
+      return;
+    }
+
     const keyForward =
       (this.keys.has('KeyW') || this.keys.has('ArrowUp') ? 1 : 0) -
       (this.keys.has('KeyS') || this.keys.has('ArrowDown') ? 1 : 0);
@@ -128,32 +181,59 @@ export class Player {
       (this.keys.has('KeyA') || this.keys.has('ArrowLeft') ? 1 : 0);
     const forward = THREE.MathUtils.clamp(keyForward + this.touchMove.y, -1, 1);
     const strafe = THREE.MathUtils.clamp(keyStrafe + this.touchMove.x, -1, 1);
-    const running = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
-    const speed = this.flying
-      ? running
-        ? FLY_RUN_SPEED
-        : FLY_SPEED
-      : running
-        ? RUN_SPEED
-        : WALK_SPEED;
-    this.currentSpeed = 0;
+    const wantsSprint = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+    this.sprinting = wantsSprint && (this.flying || this.stamina > 0.02);
 
-    if (forward || strafe) {
-      this.currentSpeed = speed;
-      const sin = Math.sin(this.yaw);
-      const cos = Math.cos(this.yaw);
-      let dx = -sin * forward + cos * strafe;
-      let dz = -cos * forward - sin * strafe;
-      const len = Math.hypot(dx, dz) || 1;
-      dx = (dx / len) * speed * dt;
-      dz = (dz / len) * speed * dt;
-
-      if (this.flying) {
-        this.position.x += dx;
-        this.position.z += dz;
-      } else {
-        this.move(dx, dz);
+    let wishSpeed = this.flying
+      ? this.sprinting
+        ? MOTION.flyRun
+        : MOTION.fly
+      : this.sprinting
+        ? MOTION.run
+        : MOTION.walk;
+    if (!this.flying && this.sprinting) {
+      this.stamina = Math.max(0, this.stamina - dt * 0.22);
+      if (this.stamina <= 0) {
+        this.sprinting = false;
+        wishSpeed = MOTION.walk;
       }
+    } else {
+      this.stamina = Math.min(1, this.stamina + dt * 0.28);
+    }
+
+    const sin = Math.sin(this.yaw);
+    const cos = Math.cos(this.yaw);
+    let wishX = -sin * forward + cos * strafe;
+    let wishZ = -cos * forward - sin * strafe;
+    const wishLen = Math.hypot(wishX, wishZ);
+    if (wishLen > 0) {
+      wishX /= wishLen;
+      wishZ /= wishLen;
+    } else {
+      wishSpeed = 0;
+    }
+
+    const stepped = stepHorizontal(
+      this.velocity.x,
+      this.velocity.z,
+      wishX,
+      wishZ,
+      wishSpeed,
+      dt,
+      this.grounded,
+      this.flying,
+    );
+    this.velocity.x = stepped.x;
+    this.velocity.z = stepped.z;
+    this.currentSpeed = Math.hypot(this.velocity.x, this.velocity.z);
+
+    const dx = this.velocity.x * dt;
+    const dz = this.velocity.z * dt;
+    if (this.flying) {
+      this.position.x += dx;
+      this.position.z += dz;
+    } else if (dx || dz) {
+      this.move(dx, dz);
     }
 
     const halfX = this.geo.size.x / 2 - 20;
@@ -169,30 +249,38 @@ export class Player {
         -1,
         1,
       );
-      this.position.y += up * FLY_VERTICAL_SPEED * dt;
-      // Never sink below the terrain.
-      this.position.y = Math.max(
-        this.position.y,
-        this.geo.heightAt(this.position.x, this.position.z),
-      );
+      const wishY = up * MOTION.flyVertical;
+      this.velocity.y = THREE.MathUtils.damp(this.velocity.y, wishY, 8, dt);
+      this.position.y += this.velocity.y * dt;
+      const ground = this.geo.heightAt(this.position.x, this.position.z);
+      if (this.position.y < ground) {
+        this.position.y = ground;
+        this.velocity.y = 0;
+      }
+      this.grounded = false;
     } else {
-      this.velocityY -= GRAVITY * dt;
-      this.position.y += this.velocityY * dt;
+      this.velocity.y -= MOTION.gravity * dt;
+      this.velocity.y = Math.max(this.velocity.y, TERMINAL_VELOCITY);
+      this.position.y += this.velocity.y * dt;
       const ground = this.geo.heightAt(this.position.x, this.position.z);
       if (this.position.y <= ground) {
         this.position.y = ground;
-        this.velocityY = 0;
+        this.velocity.y = 0;
         this.grounded = true;
+        this.coyote = COYOTE_TIME;
       } else {
         this.grounded = false;
+        this.coyote = Math.max(0, this.coyote - dt);
       }
-      if (this.grounded && (this.keys.has('Space') || this.touchUp > 0)) {
-        this.velocityY = JUMP_SPEED;
+      const jump = this.keys.has('Space') || this.touchUp > 0;
+      if (jump && !this.jumpHeld && this.coyote > 0) {
+        this.velocity.y = MOTION.jump;
         this.grounded = false;
+        this.coyote = 0;
       }
+      this.jumpHeld = jump;
     }
 
-    this.camera.position.set(this.position.x, this.position.y + EYE_HEIGHT, this.position.z);
-    this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
+    this.writeCamera();
   }
 }

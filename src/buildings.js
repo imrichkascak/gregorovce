@@ -9,16 +9,17 @@ import { facadeTexture, signTexture } from './textures.js';
 
 const CHURCH_NAME = 'Kostol narodenia Panny Márie';
 
-const WALL_COLORS = ['#e8dcbf', '#dfcfae', '#e4d4b2', '#d9c9a4', '#efe3c4', '#d4c49e'];
-const ROOF_COLORS = ['#a04a30', '#8a4028', '#7a5638', '#6b665c', '#9a8a6a', '#7d3b2a'];
+// Los Santos stucco and low tile roofs — pastels from the Grove Street blocks.
+const WALL_COLORS = ['#d7b88a', '#c4a882', '#8fb8a4', '#e0b088', '#efe0c4', '#c9b090', '#d8c4a4', '#a8c4b0'];
+const ROOF_COLORS = ['#7a5840', '#a0623c', '#5e4a3c', '#8a6a50', '#6a4e3a', '#b06840'];
 
 const KIND_COLORS = {
-  church: { wall: '#f2e8d0', roof: '#4e5560' },
-  shop: { wall: '#e6d9b4', roof: '#96603a' },
-  pub: { wall: '#e8d5ad', roof: '#7a4a30' },
-  townhall: { wall: '#eae0c4', roof: '#6d6a63' },
-  school: { wall: '#ece2c4', roof: '#7a5a44' },
-  fire_station: { wall: '#c94f3d', roof: '#8a3a34' },
+  church: { wall: '#f3ead8', roof: '#5c636c' },
+  shop: { wall: '#e7d7b4', roof: '#8d6848' },
+  pub: { wall: '#e4c8a4', roof: '#7a5340' },
+  townhall: { wall: '#e8dcc4', roof: '#6a6862' },
+  school: { wall: '#e6dcc0', roof: '#8a6848' },
+  fire_station: { wall: '#d4c0a8', roof: '#8a4038' },
 };
 
 const SIGN_STYLES = {

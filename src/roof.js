@@ -96,7 +96,8 @@ export function orientedRect(points) {
 export function gableRoofGeometry(rect, overhang = 0.45) {
   const hL = rect.length / 2 + overhang;
   const hW = rect.width / 2 + overhang;
-  const rise = Math.min(3.2, Math.max(1.1, rect.width * 0.42));
+  // Low pitch, like the bungalow roofs in San Andreas, not a steep village gable.
+  const rise = Math.min(2.05, Math.max(0.65, rect.width * 0.22));
   const e1 = [-hL, 0, -hW];
   const e2 = [hL, 0, -hW];
   const e3 = [hL, 0, hW];

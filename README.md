@@ -4,9 +4,9 @@ Interaktívna 3D vizualizácia obce **Gregorovce** (okres Prešov) v prehliadač
 prechádzka svetom ako v hre. Terén, budovy, cesty, potoky a lesy sú postavené
 z reálnych otvorených dát.
 
-Vizuálny štýl je ladený do teplej, zahmlenej estetiky klasických akčných hier —
-suchá olivová vegetácia, pieskové fasády s terakotovými strechami, jantárové
-slnko, smogová hmla a kruhový radar v HUD.
+Vizuál je ladený do GTA San Andreas: pastelový štuk, nízke škridlové strechy,
+sivý asfalt s dvojitou žltou čiarou a červenými obrubníkmi, palmy, suchý trávnik
+a bledá prašná obloha. Mapa aj ulice ostávajú Gregorovce.
 
 ## Spustenie
 
@@ -23,19 +23,18 @@ Otvor `http://localhost:5173` a klikni na **Vstúpiť do sveta**.
 
 | Klávesa | Akcia |
 | --- | --- |
-| `W` `A` `S` `D` | pohyb |
+| `W` `A` `S` `D` | chôdza (pohľadom kamery, s rozbehom a zastavením) |
 | myš | rozhľad |
-| `Shift` | beh |
-| `Space` | skok (v lete režime: hore) |
-| `Ctrl` | klesanie (v lete režime) |
-| `F` | prepni režim chôdza / let |
-| `R` | návrat na štartovaciu pozíciu (keď sa zasekneš) |
+| `Shift` | beh, kým vydrží stamina |
+| `Space` | skok |
+| `F` | prepni chôdzu a let (`Space` / `Ctrl` potom hore a dole) |
+| `R` | pád zhora na cestu pred kostol |
 | `Esc` | uvoľnenie myši |
 
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
-tlačidlá `↑` / `↓` / `FLY` / `R` vpravo dole ovládajú výšku, lietanie a reset
-pozície, `MENU` vľavo hore sa vráti do menu.
+tlačidlá `↑` / `FLY` / `R` vpravo dole ovládajú skok, lietanie a pád pred kostol
+(`↓` sa ukáže až v lete), `MENU` vľavo hore sa vráti do menu.
 
 ## Ako to funguje
 
@@ -64,8 +63,8 @@ Klient (`src/`) potom:
    a krížom (veža smeruje k ceste), a tabule pre obchod/krčmu. Dom č. 101 sa
    do statického mesh-u nedáva — ten rozbíja `gags.js`.
 6. `traffic.js` — nízko-polygónové autá a chodci, ktorí sa pohybujú po cestách.
-7. `gags.js` — dedinské scény v slučke: výbuch domu 101, Pali a Mata pred
-   kostolom pod motorkou, žumpa z bytovky 217 cez cestu do jarku.
+7. `gags.js` — dedinské scény v slučke: výbuch domu 101, Paly pridržiava Banana
+   pred kostolom kým ho prejde auto, žumpa z bytovky 217 cez cestu do jarku.
 8. `labels.js` — plávajúce menovky (kostol, obchod, krčma, obecný úrad…).
 9. `world.js` — poskladá terén, cesty s čiarami a chodníkmi, potoky, polia, ihriská,
    lesy, dopravu, štítky, oblohu a slnko.

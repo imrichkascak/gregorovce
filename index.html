@@ -19,7 +19,7 @@
         margin: 0;
         height: 100%;
         overflow: hidden;
-        background: #dfc193;
+        background: #e7d3b0;
         font-family: "Barlow Condensed", system-ui, -apple-system, "Segoe UI", sans-serif;
         color: #fff;
       }
@@ -388,7 +388,7 @@
       <div id="joystick-base"><div id="joystick-knob"></div></div>
       <div id="touch-buttons">
         <button id="btn-jump" class="tb">&#8593;</button>
-        <button id="btn-down" class="tb">&#8595;</button>
+        <button id="btn-down" class="tb hidden">&#8595;</button>
         <button id="btn-fly" class="tb">FLY</button>
         <button id="btn-r" class="tb">R</button>
       </div>
@@ -410,14 +410,13 @@
       </div>
       <div id="radar-wrap">
         <div id="info">
-          <span id="coords">—</span> · <span id="speed">0 m/s</span> · <span id="mode">Let (F)</span>
+          <span id="coords">—</span> · <span id="speed">0 m/s</span> · <span id="mode">Chôdza</span>
         </div>
         <canvas id="minimap" width="200" height="200"></canvas>
       </div>
       <div id="keys">
-        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> alebo <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> pohyb</div>
-        <div><kbd>Shift</kbd> beh &nbsp; <kbd>Space</kbd> skok</div>
-        <div><kbd>F</kbd> let &nbsp; <kbd>Esc</kbd> uvoľniť myš</div>
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> pohyb &nbsp; <kbd>Shift</kbd> beh &nbsp; <kbd>Space</kbd> skok</div>
+        <div><kbd>F</kbd> let &nbsp; <kbd>R</kbd> pád pred kostol &nbsp; <kbd>Esc</kbd> myš</div>
       </div>
     </div>
     <div id="overlay">

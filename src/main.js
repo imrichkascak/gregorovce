@@ -14,7 +14,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.12;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
@@ -72,8 +72,11 @@ for (const road of layers.roads) {
   }
 }
 
-player.spawn(spawn.x, spawn.z);
-player.yaw = Math.atan2(-(villageCentre.x - spawn.x), -(villageCentre.z - spawn.z));
+const drop = world.dropSpawn;
+const spawnYaw = drop
+  ? Math.atan2(-(drop.faceX - drop.x), -(drop.faceZ - drop.z))
+  : Math.atan2(-(villageCentre.x - spawn.x), -(villageCentre.z - spawn.z));
+player.setSpawn(drop ? drop.x : spawn.x, drop ? drop.z : spawn.z, spawnYaw);
 
 const overlay = document.getElementById('overlay');
 const startButton = document.getElementById('start');
@@ -88,7 +91,10 @@ const staminaFill = document.getElementById('stamina-fill');
 startButton.disabled = false;
 overlay.classList.add('ready');
 
-startButton.addEventListener('click', () => player.lock());
+startButton.addEventListener('click', () => {
+  if (!player.started) player.dropFromSky();
+  player.lock();
+});
 player.onLockChange = (locked) => {
   overlay.classList.toggle('hidden', locked);
   hud.classList.toggle('hidden', !locked);
@@ -102,6 +108,7 @@ if (player.touchMode) {
   const base = document.getElementById('joystick-base');
   const knob = document.getElementById('joystick-knob');
   const btnDown = document.getElementById('btn-down');
+  player.onFlyingChange = (flying) => btnDown.classList.toggle('hidden', !flying);
   const joystickRadius = 55;
   let moveId = null;
   let moveOrigin = null;
@@ -206,8 +213,7 @@ if (player.touchMode) {
   );
   document.getElementById('btn-fly').addEventListener('pointerdown', (event) => {
     event.stopPropagation();
-    player.flying = !player.flying;
-    btnDown.classList.toggle('hidden', !player.flying);
+    player.setFlying(!player.flying);
   });
   document.getElementById('btn-menu').addEventListener('pointerdown', (event) => {
     event.stopPropagation();
@@ -234,13 +240,13 @@ function drawMinimap(context, geoRef, osm, scale) {
     ((z + size.z / 2) / size.z) * height,
   ];
   context.clearRect(0, 0, width, height);
-  context.fillStyle = '#b5b98a';
+  context.fillStyle = '#c9c07a';
   context.fillRect(0, 0, width, height);
   context.save();
   context.scale(scale, scale);
 
-  context.strokeStyle = '#6a7540';
-  context.fillStyle = '#6a7540';
+  context.strokeStyle = '#5c7340';
+  context.fillStyle = '#5c7340';
   for (const forest of osm.forests) {
     context.beginPath();
     forest.latlon.forEach((p, i) => {
@@ -252,7 +258,7 @@ function drawMinimap(context, geoRef, osm, scale) {
     context.fill();
   }
 
-  context.fillStyle = '#96917e';
+  context.fillStyle = '#d2c2a4';
   for (const building of osm.buildings) {
     context.beginPath();
     building.latlon.forEach((p, i) => {
@@ -264,7 +270,7 @@ function drawMinimap(context, geoRef, osm, scale) {
     context.fill();
   }
 
-  context.strokeStyle = '#e0d9c2';
+  context.strokeStyle = '#8e8a82';
   context.lineWidth = 1.6;
   for (const road of osm.roads) {
     context.beginPath();
@@ -277,7 +283,7 @@ function drawMinimap(context, geoRef, osm, scale) {
     context.stroke();
   }
 
-  context.strokeStyle = '#5f9a8f';
+  context.strokeStyle = '#6a90a6';
   context.lineWidth = 1.4;
   for (const water of osm.waterways) {
     context.beginPath();
@@ -332,11 +338,9 @@ function drawPlayerMarker() {
 
 const clock = new THREE.Clock();
 
-// Decorative stamina: drains while sprinting on foot, refills otherwise.
-let stamina = 1;
 let lastMinute = -1;
 
-function updateHudStats(dt) {
+function updateHudStats() {
   const now = new Date();
   if (now.getMinutes() !== lastMinute) {
     lastMinute = now.getMinutes();
@@ -345,9 +349,7 @@ function updateHudStats(dt) {
       minute: '2-digit',
     });
   }
-  const sprinting = !player.flying && player.currentSpeed > 30;
-  stamina = THREE.MathUtils.clamp(stamina + (sprinting ? -0.06 : 0.15) * dt, 0, 1);
-  staminaFill.style.width = `${stamina * 100}%`;
+  staminaFill.style.width = `${player.stamina * 100}%`;
 }
 
 function tick() {
@@ -355,7 +357,10 @@ function tick() {
   player.update(dt);
   world.update(player.position, dt);
   drawPlayerMarker();
-  updateHudStats(dt);
+  updateHudStats();
+  const targetFov = player.flying ? 80 : player.sprinting ? 76 : 70;
+  camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, 8, dt);
+  camera.updateProjectionMatrix();
 
   const here = geo.toLatLon(player.position.x, player.position.z);
   coords.textContent = `${here.lat.toFixed(5)}, ${here.lon.toFixed(5)}`;

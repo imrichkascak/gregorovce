@@ -1,6 +1,6 @@
 // Village set-pieces that play on a loop:
-// the house at Gregorovce 101 blows apart and rebuilds, Pali and Mata lie in
-// the road in front of the church until a motorcycle runs them over, and the
+// the house at Gregorovce 101 blows apart and rebuilds, Paly holds Banan in
+// the road in front of the church until a car runs Banan over, and the
 // bytovka at Gregorovce 217 empties its septic tank across the road into the ditch.
 import * as THREE from 'three';
 import { roadWidth } from './osm.js';
@@ -199,7 +199,7 @@ function createExplosion(site) {
   addWall(0.24, height, width, -length / 2, height / 2, 0);
   addWall(0.24, height, width, length / 2, height / 2, 0);
 
-  const rise = Math.min(2.6, Math.max(1.15, width * 0.38));
+  const rise = Math.min(2.05, Math.max(0.65, width * 0.22));
   const halfW = width / 2;
   const slopeLen = Math.hypot(halfW, rise);
   const pitch = Math.atan2(rise, halfW);
@@ -596,67 +596,87 @@ function lyingPerson(shirtColor, hairColor) {
   return group;
 }
 
-function buildMotorcycle() {
+/** Paly kneels beside Banan and reaches down to hold him in the lane. */
+function holdingPerson(shirtColor, hairColor) {
   const group = new THREE.Group();
-  const frameMat = new THREE.MeshStandardMaterial({ color: '#1c1e22', roughness: 0.45, metalness: 0.35 });
-  const tankMat = new THREE.MeshStandardMaterial({ color: '#a8342c', roughness: 0.4, metalness: 0.2 });
-  const wheelMat = new THREE.MeshStandardMaterial({ color: '#141414', roughness: 0.9 });
   const skin = new THREE.MeshStandardMaterial({ color: '#e0ac82', roughness: 1 });
-  const jacket = new THREE.MeshStandardMaterial({ color: '#2c3340', roughness: 1 });
+  const shirt = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 1 });
+  const pants = new THREE.MeshStandardMaterial({ color: '#3a4038', roughness: 1 });
+  const hair = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 1 });
 
-  const wheelGeom = new THREE.CylinderGeometry(0.34, 0.34, 0.14, 12);
+  const add = (parent, geom, material, x, y, z) => {
+    const mesh = new THREE.Mesh(geom, material);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    parent.add(mesh);
+    return mesh;
+  };
+
+  // Knees on the ground, shins folded back. Local +Z points at Banan.
+  add(group, new THREE.BoxGeometry(0.42, 0.16, 0.55), pants, 0, 0.14, -0.05);
+  add(group, new THREE.BoxGeometry(0.16, 0.14, 0.42), pants, -0.14, 0.12, -0.42);
+  add(group, new THREE.BoxGeometry(0.16, 0.14, 0.42), pants, 0.14, 0.12, -0.42);
+
+  const lean = new THREE.Group();
+  lean.position.set(0, 0.42, 0.05);
+  lean.rotation.x = 0.85;
+  group.add(lean);
+  add(lean, new THREE.BoxGeometry(0.46, 0.52, 0.26), shirt, 0, 0.28, 0.08);
+  add(lean, new THREE.SphereGeometry(0.16, 10, 8), skin, 0, 0.62, 0.1);
+  add(lean, new THREE.SphereGeometry(0.17, 10, 8), hair, 0, 0.7, 0.04);
+  add(lean, new THREE.BoxGeometry(0.12, 0.12, 0.72), shirt, -0.28, 0.18, 0.42);
+  add(lean, new THREE.BoxGeometry(0.12, 0.12, 0.72), shirt, 0.28, 0.18, 0.42);
+  add(lean, new THREE.BoxGeometry(0.12, 0.1, 0.14), skin, -0.28, 0.1, 0.8);
+  add(lean, new THREE.BoxGeometry(0.12, 0.1, 0.14), skin, 0.28, 0.1, 0.8);
+  return group;
+}
+
+function buildCar() {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: '#d8d2c4', roughness: 0.45, metalness: 0.2 });
+  const cabinMat = new THREE.MeshStandardMaterial({ color: '#243038', roughness: 0.25, metalness: 0.15 });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: '#161616', roughness: 0.9 });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.48, 3.6), bodyMat);
+  body.position.y = 0.58;
+  body.castShadow = true;
+  group.add(body);
+
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.42, 1.7), cabinMat);
+  cabin.position.set(0, 1.0, -0.15);
+  cabin.castShadow = true;
+  group.add(cabin);
+
+  const wheelGeom = new THREE.CylinderGeometry(0.3, 0.3, 0.18, 10);
   wheelGeom.rotateZ(Math.PI / 2);
   const wheels = [];
-  for (const z of [0.78, -0.78]) {
-    const wheel = new THREE.Mesh(wheelGeom, wheelMat);
-    wheel.position.set(0, 0.34, z);
-    wheel.castShadow = true;
-    group.add(wheel);
-    wheels.push(wheel);
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1.15, 1.15]) {
+      const wheel = new THREE.Mesh(wheelGeom, wheelMat);
+      wheel.position.set(sx * 0.78, 0.3, sz);
+      group.add(wheel);
+      wheels.push(wheel);
+    }
   }
 
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 1.7), frameMat);
-  frame.position.set(0, 0.48, 0);
-  frame.castShadow = true;
-  group.add(frame);
-
-  const tank = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.28, 0.55), tankMat);
-  tank.position.set(0, 0.68, 0.15);
-  tank.castShadow = true;
-  group.add(tank);
-
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.1, 0.48), frameMat);
-  seat.position.set(0, 0.62, -0.28);
-  group.add(seat);
-
-  const bars = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.06, 0.06), frameMat);
-  bars.position.set(0, 0.92, 0.62);
-  group.add(bars);
-
-  const rider = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.42, 0.24), jacket);
-  rider.position.set(0, 0.92, -0.22);
-  rider.castShadow = true;
-  group.add(rider);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), skin);
-  head.position.set(0, 1.22, -0.18);
-  group.add(head);
-
   const lampMat = new THREE.MeshStandardMaterial({
-    color: '#fff4c4',
+    color: '#fff6c8',
     emissive: '#ffe7a0',
     emissiveIntensity: 0.7,
   });
-  const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.08), lampMat);
-  lamp.position.set(0, 0.62, 0.95);
-  group.add(lamp);
+  for (const sx of [-0.48, 0.48]) {
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.06), lampMat);
+    lamp.position.set(sx, 0.58, 1.8);
+    group.add(lamp);
+  }
 
   group.userData.wheels = wheels;
   return group;
 }
 
 /**
- * Pali and Mata lie across the lane in front of the church and wait
- * until the motorcycle drives over them.
+ * Banan lies in the lane in front of the church. Paly kneels beside him and
+ * holds him there so the passing car runs over Banan, not Paly.
  */
 function createRunover(geo, spawn, roads) {
   const group = new THREE.Group();
@@ -664,40 +684,46 @@ function createRunover(geo, spawn, roads) {
   const road = closestMainRoad(geo, roads, spawn.x, spawn.z);
   if (!road) return { group, anchor: { x: spawn.x, z: spawn.z }, update() {} };
 
-  const lateral = Math.min(1.4, road.width * 0.22);
-  const spot = samplePath(geo, road.path, road.distance, lateral);
-  // A few metres along the lane so they are not standing inside the other church NPC.
-  const ahead = samplePath(geo, road.path, road.distance + 7, lateral);
-  const places = [
-    { name: 'PALI', shirt: '#3f6e9e', hair: '#3a2a22', along: -0.9 },
-    { name: 'MATA', shirt: '#c45a6a', hair: '#2a1814', along: 0.9 },
-  ];
+  const lateral = Math.min(1.35, road.width * 0.22);
+  const alongRoad = road.distance + 8;
+  const bananAt = samplePath(geo, road.path, alongRoad, lateral);
+  // Far enough aside that the car body misses him, close enough that his arms reach.
+  const palyAt = samplePath(geo, road.path, alongRoad, lateral + Math.sign(lateral || 1) * 1.45);
 
-  const bodies = places.map((person) => {
-    const x = ahead.x + ahead.tx * person.along;
-    const z = ahead.z + ahead.tz * person.along;
-    const body = lyingPerson(person.shirt, person.hair);
-    const ground = geo.heightAt(x, z);
-    body.position.set(x, ground + 0.16, z);
-    // Length of the body crosses the lane, so the bike rolls over the torso.
-    body.rotation.y = ahead.heading + Math.PI / 2;
-    group.add(body);
-    group.add(nameSprite(person.name, x, ground + 1.15, z));
-    return { mesh: body, x, z, flat: 0 };
-  });
+  const bananGround = geo.heightAt(bananAt.x, bananAt.z);
+  const banan = lyingPerson('#e2b43a', '#3a2a18');
+  banan.position.set(bananAt.x, bananGround + 0.16, bananAt.z);
+  banan.rotation.y = bananAt.heading + Math.PI / 2;
+  group.add(banan);
+  group.add(nameSprite('BANAN', bananAt.x, bananGround + 1.05, bananAt.z));
 
-  const bike = buildMotorcycle();
-  group.add(bike);
+  const palyGround = geo.heightAt(palyAt.x, palyAt.z);
+  const paly = holdingPerson('#3f6e9e', '#2a211c');
+  paly.position.set(palyAt.x, palyGround + 0.02, palyAt.z);
+  paly.rotation.y = Math.atan2(bananAt.x - palyAt.x, bananAt.z - palyAt.z);
+  group.add(paly);
+  group.add(nameSprite('PALY', palyAt.x, palyGround + 1.7, palyAt.z));
 
-  const halfSpan = Math.min(18, road.path.length * 0.35);
+  const car = buildCar();
+  group.add(car);
+
+  // Drop the player further from the church than Banan, looking back at him.
+  const ahead = samplePath(geo, road.path, alongRoad + 16, lateral);
+  const behind = samplePath(geo, road.path, alongRoad - 16, lateral);
+  const churchDist = (point) => (point.x - spawn.x) ** 2 + (point.z - spawn.z) ** 2;
+  const dropAt = churchDist(ahead) > churchDist(behind) ? ahead : behind;
+
+  const halfSpan = Math.min(22, road.path.length * 0.35);
   let along = -halfSpan;
   let direction = 1;
+  let flat = 0;
 
   return {
     group,
-    anchor: { x: ahead.x, z: ahead.z },
+    anchor: { x: bananAt.x, z: bananAt.z },
+    drop: { x: dropAt.x, z: dropAt.z, faceX: bananAt.x, faceZ: bananAt.z },
     update(dt) {
-      along += direction * 9 * dt;
+      along += direction * 12 * dt;
       if (along > halfSpan) {
         along = halfSpan;
         direction = -1;
@@ -705,19 +731,16 @@ function createRunover(geo, spawn, roads) {
         along = -halfSpan;
         direction = 1;
       }
-      const sample = samplePath(geo, road.path, road.distance + 7 + along, lateral);
+      const sample = samplePath(geo, road.path, alongRoad + along, lateral);
       const ground = geo.heightAt(sample.x, sample.z);
-      bike.position.set(sample.x, ground, sample.z);
-      const heading = sample.heading + (direction < 0 ? Math.PI : 0);
-      bike.rotation.y = heading;
-      for (const wheel of bike.userData.wheels) wheel.rotation.x += direction * dt * 18;
+      car.position.set(sample.x, ground + 0.02, sample.z);
+      car.rotation.y = sample.heading + (direction < 0 ? Math.PI : 0);
+      for (const wheel of car.userData.wheels) wheel.rotation.x += direction * dt * 22;
 
-      for (const body of bodies) {
-        const distance = Math.hypot(sample.x - body.x, sample.z - body.z);
-        if (distance < 2.1) body.flat = 1;
-        else body.flat = Math.max(0, body.flat - dt * 0.4);
-        body.mesh.scale.y = 1 - body.flat * 0.86;
-      }
+      const distance = Math.hypot(sample.x - bananAt.x, sample.z - bananAt.z);
+      if (distance < 2.3) flat = 1;
+      else flat = Math.max(0, flat - dt * 0.45);
+      banan.scale.y = 1 - flat * 0.86;
     },
   };
 }
@@ -745,6 +768,7 @@ export function createVillageGags(geo, sites, roads) {
     group.add(runover.group);
     parts.push(runover);
     anchors.church = runover.anchor;
+    if (runover.drop) anchors.drop = runover.drop;
   }
 
   return {

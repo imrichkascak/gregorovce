@@ -2,7 +2,28 @@
 // floating name labels for points of interest.
 import * as THREE from 'three';
 
-/** Facade tile representing 8 x 3 m: one small window per floor. */
+function drawBarredWindow(ctx, x, y, winW, winH) {
+  ctx.fillStyle = '#f7f1e6';
+  ctx.fillRect(x - 5, y - 5, winW + 10, winH + 10);
+  ctx.fillStyle = '#1a222a';
+  ctx.fillRect(x, y, winW, winH);
+  ctx.strokeStyle = '#12161a';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let i = 1; i <= 3; i += 1) {
+    const barX = x + (winW * i) / 4;
+    ctx.moveTo(barX, y);
+    ctx.lineTo(barX, y + winH);
+  }
+  ctx.moveTo(x, y + winH * 0.42);
+  ctx.lineTo(x + winW, y + winH * 0.42);
+  ctx.stroke();
+}
+
+/**
+ * Stucco tile, 8 x 3 m. Mostly white so the per-house vertex color tints it
+ * into the San Andreas pastels; windows stay dark with security bars.
+ */
 export function facadeTexture() {
   const width = 256;
   const height = 96;
@@ -11,35 +32,65 @@ export function facadeTexture() {
   canvas.height = height;
   const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#efe6cc';
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, width, height);
 
-  ctx.fillStyle = 'rgba(90,70,40,0.1)';
-  ctx.fillRect(0, height - 10, width, 10);
+  for (let i = 0; i < 500; i += 1) {
+    const shade = 0.03 + ((i * 17) % 7) * 0.008;
+    ctx.fillStyle = `rgba(80,60,40,${shade})`;
+    ctx.fillRect((i * 53) % width, (i * 29) % height, 2, 2);
+  }
 
-  const winW = 46;
-  const winH = 40;
-  const x = (width - winW) / 2;
-  const y = (height - winH) / 2 - 4;
-  ctx.fillStyle = '#f2ead0';
-  ctx.fillRect(x - 3, y - 3, winW + 6, winH + 6);
-  ctx.fillStyle = '#4e5a66';
-  ctx.fillRect(x, y, winW, winH);
-  ctx.fillStyle = 'rgba(255,240,200,0.22)';
-  ctx.fillRect(x, y, winW, winH * 0.4);
-  ctx.strokeStyle = '#f2ead0';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x + winW / 2, y);
-  ctx.lineTo(x + winW / 2, y + winH);
-  ctx.moveTo(x, y + winH / 2);
-  ctx.lineTo(x + winW, y + winH / 2);
-  ctx.stroke();
+  ctx.fillStyle = 'rgba(60,40,20,0.16)';
+  ctx.fillRect(0, height - 12, width, 12);
+
+  drawBarredWindow(ctx, 38, 22, 52, 48);
+  drawBarredWindow(ctx, 160, 22, 52, 48);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(1 / 8, 1 / 3);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+/** Cracked Los Santos asphalt. UVs on the road ribbon are in ~6 m tiles. */
+export function asphaltTexture() {
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#8c8982';
+  ctx.fillRect(0, 0, size, size);
+
+  for (let i = 0; i < 900; i += 1) {
+    const x = (i * 47) % size;
+    const y = (i * 91) % size;
+    const dark = (i % 5) === 0;
+    ctx.fillStyle = dark ? 'rgba(40,38,34,0.35)' : 'rgba(255,250,240,0.06)';
+    ctx.fillRect(x, y, 2, 2);
+  }
+
+  ctx.strokeStyle = 'rgba(50,48,44,0.55)';
+  ctx.lineWidth = 2;
+  const cracks = [
+    [12, 40, 80, 70, 140, 60, 200, 110],
+    [30, 180, 90, 200, 160, 170, 230, 210],
+    [180, 20, 200, 80, 170, 140],
+  ];
+  for (const crack of cracks) {
+    ctx.beginPath();
+    ctx.moveTo(crack[0], crack[1]);
+    for (let i = 2; i < crack.length; i += 2) ctx.lineTo(crack[i], crack[i + 1]);
+    ctx.stroke();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
   return texture;
