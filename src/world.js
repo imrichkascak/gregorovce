@@ -8,6 +8,8 @@ import { orientedRect } from './roof.js';
 import { buildBuildings } from './buildings.js';
 import { buildLabels } from './labels.js';
 import { createTraffic } from './traffic.js';
+import { createVillageGags } from './gags.js';
+import { speechBubbleTexture } from './textures.js';
 
 // Classic open-world crime game mood — warm smog haze, dry olive vegetation,
 // amber sun.
@@ -565,6 +567,51 @@ function buildTrees(geo, forestPolygons) {
   return group;
 }
 
+/**
+ * Static character standing on the road in front of the church — the guy from
+ * the loading artwork (pink tee, camo shorts, sunglasses) with a speech bubble.
+ */
+function buildChurchNpc(geo, spawn) {
+  const group = new THREE.Group();
+  const skin = new THREE.MeshStandardMaterial({ color: '#e0ac82', roughness: 1 });
+  const shirt = new THREE.MeshStandardMaterial({ color: '#e0798f', roughness: 1 });
+  const camo = new THREE.MeshStandardMaterial({ color: '#7d7a4c', roughness: 1 });
+  const dark = new THREE.MeshStandardMaterial({ color: '#181818', roughness: 0.8 });
+
+  const addPart = (geom, material, x, y, z) => {
+    const mesh = new THREE.Mesh(geom, material);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    group.add(mesh);
+  };
+
+  addPart(new THREE.BoxGeometry(0.46, 0.62, 0.26), shirt, 0, 1.06, 0);
+  addPart(new THREE.BoxGeometry(0.13, 0.52, 0.14), shirt, -0.31, 1.28, 0);
+  addPart(new THREE.BoxGeometry(0.13, 0.52, 0.14), shirt, 0.31, 1.28, 0);
+  addPart(new THREE.SphereGeometry(0.17, 12, 10), skin, 0, 1.53, 0);
+  addPart(new THREE.BoxGeometry(0.3, 0.07, 0.06), dark, 0, 1.55, 0.14);
+  addPart(new THREE.BoxGeometry(0.16, 0.34, 0.17), camo, -0.11, 0.6, 0);
+  addPart(new THREE.BoxGeometry(0.16, 0.34, 0.17), camo, 0.11, 0.6, 0);
+  addPart(new THREE.BoxGeometry(0.13, 0.32, 0.14), skin, -0.11, 0.28, 0);
+  addPart(new THREE.BoxGeometry(0.13, 0.32, 0.14), skin, 0.11, 0.28, 0);
+  addPart(new THREE.BoxGeometry(0.16, 0.1, 0.28), dark, -0.11, 0.06, 0.04);
+  addPart(new THREE.BoxGeometry(0.16, 0.1, 0.28), dark, 0.11, 0.06, 0.04);
+
+  const ground = geo.heightAt(spawn.x, spawn.z);
+  group.position.set(spawn.x, ground + 0.02, spawn.z);
+  group.rotation.y = Math.atan2(spawn.face.x - spawn.x, spawn.face.z - spawn.z);
+
+  const { texture, aspect } = speechBubbleTexture('SUCK MY DICK EVERYDAY');
+  const bubbleHeight = 1.3;
+  const bubble = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: true }),
+  );
+  bubble.scale.set(bubbleHeight * aspect, bubbleHeight, 1);
+  bubble.position.set(spawn.x, ground + 3.1, spawn.z);
+
+  return { npc: group, bubble };
+}
+
 function buildSky() {
   const geom = new THREE.SphereGeometry(6000, 32, 16);
   const material = new THREE.ShaderMaterial({
@@ -673,7 +720,28 @@ export function createWorld(scene, geo, layers) {
   scene.add(built.group);
   scene.add(buildLabels(built.labels));
 
+  if (built.npcSpawn) {
+    const { npc, bubble } = buildChurchNpc(geo, built.npcSpawn);
+    scene.add(npc);
+    scene.add(bubble);
+    // Small collider so the player cannot walk through him.
+    const c = built.npcSpawn;
+    built.colliders.push([
+      { x: c.x - 0.35, z: c.z - 0.35 },
+      { x: c.x + 0.35, z: c.z - 0.35 },
+      { x: c.x + 0.35, z: c.z + 0.35 },
+      { x: c.x - 0.35, z: c.z + 0.35 },
+    ]);
+  }
+
   scene.add(buildLeisure(geo, layers.leisure, layers.roads));
+
+  const gags = createVillageGags(
+    geo,
+    { explosion: built.explosion, septic: built.septic, church: built.npcSpawn },
+    layers.roads,
+  );
+  scene.add(gags.group);
 
   const traffic = createTraffic(geo, layers);
   scene.add(traffic.group);
@@ -681,11 +749,14 @@ export function createWorld(scene, geo, layers) {
   return {
     colliders: built.colliders,
     sun,
+    npcSpawn: built.npcSpawn,
+    gagAnchors: gags.anchors,
     update(anchor, dt) {
       sun.position.copy(anchor).addScaledVector(SUN_DIR, 1400);
       sun.target.position.copy(anchor);
       sun.target.updateMatrixWorld();
       traffic.update(dt);
+      gags.update(dt);
     },
   };
 }

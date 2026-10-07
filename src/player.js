@@ -45,6 +45,7 @@ export class Player {
     document.addEventListener('keydown', (event) => {
       this.keys.add(event.code);
       if (event.code === 'KeyF') this.flying = !this.flying;
+      if (event.code === 'KeyR') this.respawn();
       if (event.code === 'Space' || event.code.startsWith('Arrow')) event.preventDefault();
     });
     document.addEventListener('keyup', (event) => this.keys.delete(event.code));
@@ -79,7 +80,19 @@ export class Player {
   }
 
   spawn(x, z) {
+    this.spawnPoint = { x, z };
     this.position.set(x, this.geo.heightAt(x, z), z);
+  }
+
+  /** Teleports back to the initial spawn — escape hatch when stuck. */
+  respawn() {
+    if (!this.spawnPoint) return;
+    const { x, z } = this.spawnPoint;
+    this.position.set(x, this.geo.heightAt(x, z), z);
+    this.velocityY = 0;
+    this.touchMove.x = 0;
+    this.touchMove.y = 0;
+    this.touchUp = 0;
   }
 
   collides(x, z) {
@@ -157,6 +170,11 @@ export class Player {
         1,
       );
       this.position.y += up * FLY_VERTICAL_SPEED * dt;
+      // Never sink below the terrain.
+      this.position.y = Math.max(
+        this.position.y,
+        this.geo.heightAt(this.position.x, this.position.z),
+      );
     } else {
       this.velocityY -= GRAVITY * dt;
       this.position.y += this.velocityY * dt;

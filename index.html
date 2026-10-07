@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gregorovce 3D — virtuálna prechádzka</title>
+    <title>GTA Gregorovce</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -337,6 +337,32 @@
       #btn-down.hidden {
         display: none;
       }
+      /* Mobile/portrait: keep the loading-art character in frame, shrink the
+         radar and tuck it under the top-right stats. */
+      @media (orientation: portrait), (max-width: 720px) {
+        #overlay {
+          background-position: 78% center;
+        }
+      }
+      @media (max-width: 720px) {
+        #menu-title {
+          font-size: 44px;
+        }
+      }
+      body.touch #radar-wrap {
+        top: 205px;
+        right: 12px;
+        bottom: auto;
+        left: auto;
+        align-items: flex-end;
+      }
+      body.touch #minimap {
+        width: 124px;
+        height: 124px;
+      }
+      body.touch #info {
+        font-size: 12px;
+      }
       #loading {
         position: fixed;
         left: 50%;
@@ -361,9 +387,10 @@
       <button id="btn-menu" class="tb">MENU</button>
       <div id="joystick-base"><div id="joystick-knob"></div></div>
       <div id="touch-buttons">
-        <button id="btn-jump" class="tb">SKOK</button>
+        <button id="btn-jump" class="tb">&#8593;</button>
         <button id="btn-down" class="tb">&#8595;</button>
-        <button id="btn-fly" class="tb">LET</button>
+        <button id="btn-fly" class="tb">FLY</button>
+        <button id="btn-r" class="tb">R</button>
       </div>
     </div>
     <div id="hud" class="hidden">
@@ -394,7 +421,7 @@
       </div>
     </div>
     <div id="overlay">
-      <div id="menu-title">GREGOROVCE</div>
+      <div id="menu-title">GTA GREGOROVCE</div>
       <button id="start" disabled>PLAY</button>
       <div id="loading-row">
         <div id="loading-label">LOADING...</div>

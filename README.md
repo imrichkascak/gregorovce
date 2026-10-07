@@ -29,12 +29,13 @@ Otvor `http://localhost:5173` a klikni na **Vstúpiť do sveta**.
 | `Space` | skok (v lete režime: hore) |
 | `Ctrl` | klesanie (v lete režime) |
 | `F` | prepni režim chôdza / let |
+| `R` | návrat na štartovaciu pozíciu (keď sa zasekneš) |
 | `Esc` | uvoľnenie myši |
 
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
-tlačidlá `SKOK` / `↓` / `LET` vpravo dole ovládajú skok a lietanie, `MENU`
-vľavo hore sa vráti do menu.
+tlačidlá `↑` / `↓` / `FLY` / `R` vpravo dole ovládajú výšku, lietanie a reset
+pozície, `MENU` vľavo hore sa vráti do menu.
 
 ## Ako to funguje
 
@@ -60,13 +61,16 @@ Klient (`src/`) potom:
 4. `roof.js` — sedlová strecha na minimálnom obdĺžniku budovy (aby domy vyzerali
    ako domy, nie ako hranoly).
 5. `buildings.js` — postaví domy (steny + sedlová strecha), kostol s vežou, ihlou
-   a krížom (veža smeruje k ceste), a tabule pre obchod/krčmu.
+   a krížom (veža smeruje k ceste), a tabule pre obchod/krčmu. Dom č. 101 sa
+   do statického mesh-u nedáva — ten rozbíja `gags.js`.
 6. `traffic.js` — nízko-polygónové autá a chodci, ktorí sa pohybujú po cestách.
-7. `labels.js` — plávajúce menovky (kostol, obchod, krčma, obecný úrad…).
-8. `world.js` — poskladá terén, cesty s čiarami a chodníkmi, potoky, polia, ihriská,
+7. `gags.js` — dedinské scény v slučke: výbuch domu 101, Pali a Mata pred
+   kostolom pod motorkou, žumpa z bytovky 217 cez cestu do jarku.
+8. `labels.js` — plávajúce menovky (kostol, obchod, krčma, obecný úrad…).
+9. `world.js` — poskladá terén, cesty s čiarami a chodníkmi, potoky, polia, ihriská,
    lesy, dopravu, štítky, oblohu a slnko.
-9. `player.js` — first-person ovládač (pointer lock, gravitácia, kolízia s budovami).
-10. `main.js` — poskladá scénu, HUD a minimapu.
+10. `player.js` — first-person ovládač (pointer lock, gravitácia, kolízia s budovami).
+11. `main.js` — poskladá scénu, HUD a minimapu.
 
 Všetko je zlúčené do niekoľkých meshov, takže scéna má okolo 160 draw call-ov a zvládne
 aj slabší stroj.

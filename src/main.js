@@ -213,6 +213,10 @@ if (player.touchMode) {
     event.stopPropagation();
     player.pause();
   });
+  document.getElementById('btn-r').addEventListener('pointerdown', (event) => {
+    event.stopPropagation();
+    player.respawn();
+  });
 }
 
 // Static top-down minimap drawn once, with a live player marker on top.

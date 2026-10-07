@@ -109,3 +109,82 @@ export function signTexture(text, background, foreground) {
   texture.anisotropy = 4;
   return texture;
 }
+
+/** Comic-style speech bubble with a tail pointing down-left (towards speaker). */
+export function speechBubbleTexture(text) {
+  const pad = 24;
+  const fontSize = 36;
+  const lineHeight = fontSize * 1.2;
+  const measure = document.createElement('canvas').getContext('2d');
+  measure.font = `700 ${fontSize}px "Barlow Condensed", system-ui, sans-serif`;
+
+  // Naive word wrap at ~420 px so long shouts stay readable.
+  const maxWidth = 420;
+  const lines = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (measure.measureText(candidate).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(line);
+
+  const textWidth = Math.max(...lines.map((l) => measure.measureText(l).width));
+  const width = Math.ceil(textWidth) + pad * 2;
+  const bubbleHeight = Math.ceil(lines.length * lineHeight + pad);
+  const height = bubbleHeight + 30;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+
+  // Bubble body
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 5;
+  const radius = 18;
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.lineTo(width - radius, 0);
+  ctx.quadraticCurveTo(width, 0, width, radius);
+  ctx.lineTo(width, bubbleHeight - radius);
+  ctx.quadraticCurveTo(width, bubbleHeight, width - radius, bubbleHeight);
+  ctx.lineTo(radius, bubbleHeight);
+  ctx.quadraticCurveTo(0, bubbleHeight, 0, bubbleHeight - radius);
+  ctx.lineTo(0, radius);
+  ctx.quadraticCurveTo(0, 0, radius, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Tail pointing down towards the speaker
+  const tailX = width * 0.22;
+  ctx.beginPath();
+  ctx.moveTo(tailX, bubbleHeight - 4);
+  ctx.lineTo(tailX + 14, height - 4);
+  ctx.lineTo(tailX + 42, bubbleHeight - 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Hide the seam where tail meets bubble
+  ctx.fillRect(tailX + 3, bubbleHeight - 5, 37, 8);
+
+  // Text
+  ctx.fillStyle = '#000000';
+  ctx.font = `700 ${fontSize}px "Barlow Condensed", system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  lines.forEach((l, i) => {
+    ctx.fillText(l, width / 2, pad / 2 + lineHeight * (i + 0.5));
+  });
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return { texture, aspect: width / height };
+}

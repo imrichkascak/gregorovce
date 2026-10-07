@@ -110,6 +110,7 @@ function churchLayout(geo, points, rect, roads) {
     return {
       tower: { x: rect.center.x, z: rect.center.z, size },
       extension: null,
+      roadPoint: null,
     };
   }
   const front = nearestBoundaryPoint(points, nearest.x, nearest.z);
@@ -121,6 +122,7 @@ function churchLayout(geo, points, rect, roads) {
   return {
     tower: { ...inward(front, rect.center, size * 0.5), size },
     extension: { ...inward(back, rect.center, size * 0.45), size: size * 0.9 },
+    roadPoint: nearest,
   };
 }
 
@@ -213,6 +215,9 @@ export function buildBuildings(geo, buildings, pois, roads) {
   const colliders = [];
   const labels = [];
   const towerPositions = [];
+  let npcSpawn = null;
+  let explosion = null;
+  let septic = null;
   const group = new THREE.Group();
   group.name = 'buildings';
 
@@ -225,6 +230,21 @@ export function buildBuildings(geo, buildings, pois, roads) {
     const height = isChurch ? 7 : buildingHeight(b.tags);
     const groundY = groundAtFootprint(geo, points);
     const rect = orientedRect(points);
+    const palette = KIND_COLORS[kind] ?? {
+      wall: WALL_COLORS[Math.floor(hash(b.id) * WALL_COLORS.length)],
+      roof: ROOF_COLORS[Math.floor(hash(b.id * 1.7) * ROOF_COLORS.length)],
+    };
+    const houseNumber = String(b.tags['addr:housenumber'] ?? '');
+
+    // Gregorovce 101 is rebuilt every few seconds as an explosion in gags.js,
+    // so it must not also be baked into the static village mesh.
+    if (houseNumber === '101') {
+      explosion = { rect, groundY, height, wall: palette.wall, roof: palette.roof };
+      colliders.push(points);
+      continue;
+    }
+    // Bytovka the village empties into the ditch across the road.
+    if (houseNumber === '217') septic = { points, rect, groundY };
 
     const shape = new THREE.Shape();
     points.forEach((p, i) => {
@@ -238,10 +258,6 @@ export function buildBuildings(geo, buildings, pois, roads) {
     });
     wallGeom.rotateX(-Math.PI / 2);
     wallGeom.translate(0, groundY, 0);
-    const palette = KIND_COLORS[kind] ?? {
-      wall: WALL_COLORS[Math.floor(hash(b.id) * WALL_COLORS.length)],
-      roof: ROOF_COLORS[Math.floor(hash(b.id * 1.7) * ROOF_COLORS.length)],
-    };
     setUniformColor(wallGeom, new THREE.Color(palette.wall));
     wallGeoms.push(wallGeom);
     colliders.push(points);
@@ -256,6 +272,18 @@ export function buildBuildings(geo, buildings, pois, roads) {
       const layout = churchLayout(geo, points, rect, roads);
       towerGeoms.push(...buildChurchTower(layout.tower, groundY, height, palette, layout.tower.size));
       towerPositions.push({ x: layout.tower.x, z: layout.tower.z });
+      if (layout.roadPoint) {
+        // Shift him a few metres away from the church so he stands on the
+        // road itself, not inside the tower geometry.
+        const dx = layout.roadPoint.x - layout.tower.x;
+        const dz = layout.roadPoint.z - layout.tower.z;
+        const len = Math.hypot(dx, dz) || 1;
+        npcSpawn = {
+          x: layout.roadPoint.x + (dx / len) * 3,
+          z: layout.roadPoint.z + (dz / len) * 3,
+          face: layout.tower,
+        };
+      }
       if (layout.extension) {
         towerGeoms.push(
           ...buildChurchExtension(
@@ -342,5 +370,5 @@ export function buildBuildings(geo, buildings, pois, roads) {
 
   group.userData.towers = towerPositions;
   group.userData.labels = labels;
-  return { group, colliders, labels };
+  return { group, colliders, labels, npcSpawn, explosion, septic };
 }
