@@ -159,7 +159,9 @@
         inset: 0;
         display: grid;
         place-items: center;
-        background: #dfc193 url("assets/loading.jpg") center / cover no-repeat;
+        /* Artwork has no baked-in loader, so fit it whole (contain) instead of
+           stretching/cropping it. */
+        background: #0b0b0d url("assets/loading.jpg") center / contain no-repeat;
         z-index: 10;
       }
       #overlay::before {
@@ -423,13 +425,7 @@
         grid-template-columns: repeat(2, 1fr);
         gap: 8px;
       }
-      /* Mobile/portrait: keep the loading-art character in frame, shrink the
-         radar and tuck it under the top-right stats. */
-      @media (orientation: portrait), (max-width: 720px) {
-        #overlay {
-          background-position: 78% center;
-        }
-      }
+      /* Mobile/portrait: shrink the radar and tuck it under the top-right stats. */
       @media (max-width: 720px) {
         #menu-title {
           font-size: 44px;
