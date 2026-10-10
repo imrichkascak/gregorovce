@@ -1,5 +1,22 @@
 # Poznámky pre agentov (Gregorovce 3D)
 
+## Overenie (automatické)
+
+```bash
+npm test           # node --test (unit testy: motion.js, rules.js)
+npm run verify     # spustí server + Playwright assertions pre všetky fázy
+```
+
+`npm run verify` (`scripts/verify.cjs`) naštartuje `python3 -m http.server 5173`,
+prejde svet v headless Chrome, **programovo** overí akceptačné kritériá z
+`GTA-SA-PLAN.md` cez `window.__gregorovce` a vygeneruje screenshoty do
+`/tmp/opencode` (`verify-menu.png`, `verify-world.png`, `verify-mobile.png`).
+Exit 0 = všetko prešlo. Agent **nevidí obrázky** — estetiku potvrdzuje človek.
+
+Debug handle `window.__gregorovce` obsahuje: `THREE, scene, camera, renderer, geo,
+world, player, layers, avatar, cameraRig, radar, dayNight, weather, audio, weapons,
+vehicles, wanted, missions, postfx`. Každý nový systém vystav tu.
+
 ## Mapa vizuálneho štýlu
 
 Farby a atmosféra sú rozhádzané do viacerých súborov — pri zmene vizuálu prejdi

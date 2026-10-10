@@ -1,9 +1,23 @@
-// Bootstraps the Gregorovce 3D world: renderer, scene, HUD and game loop.
+// Bootstraps the Gregorovce 3D world: renderer, scene, HUD, all gameplay systems
+// (avatar, camera, radar, day/night, weather, audio, weapons, vehicles, wanted,
+// missions) and the game loop.
 import * as THREE from 'three';
 import { Geo } from './geo.js';
 import { loadOsm } from './osm.js';
 import { createWorld } from './world.js';
 import { Player } from './player.js';
+import { createAvatar } from './avatar.js';
+import { createCameraRig } from './camera-rig.js';
+import { createRadar } from './radar.js';
+import { createDayNight } from './daynight.js';
+import { createWeather } from './weather.js';
+import { createAudio } from './audio.js';
+import { createWeapons } from './weapons.js';
+import { createVehicles } from './vehicles.js';
+import { createWanted } from './wanted.js';
+import { createMissions } from './missions.js';
+import { createPostFX } from './postfx.js';
+import { formatClock, formatMoney, stars as starString } from './rules.js';
 
 const canvas = document.getElementById('minimap');
 const ctx = canvas.getContext('2d');
@@ -26,12 +40,6 @@ const camera = new THREE.PerspectiveCamera(
   8000,
 );
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
 const [heightmap, layers] = await Promise.all([
   fetch('data/heightmap.json').then((res) => res.json()),
   loadOsm('data/gregorovce-osm.json'),
@@ -40,8 +48,58 @@ const [heightmap, layers] = await Promise.all([
 const geo = new Geo(heightmap);
 const world = createWorld(scene, geo, layers);
 const player = new Player(camera, geo, world.colliders);
+const avatar = createAvatar();
+avatar.group.visible = false;
+scene.add(avatar.group);
+player.avatar = avatar;
 
-window.__gregorovce = { THREE, scene, camera, renderer, geo, world, player, layers };
+const cameraRig = createCameraRig(camera, player, world.colliders);
+const radar = createRadar(geo, layers);
+const dayNight = createDayNight({
+  scene,
+  sky: world.sky,
+  sun: world.sun,
+  hemi: world.hemi,
+  streetlightMaterial: world.streetlightMaterial,
+  sunDirection: world.sunDirection,
+});
+const weather = createWeather({ scene });
+const audio = createAudio();
+const wanted = createWanted({ scene, geo, player, audio });
+const weapons = createWeapons({
+  camera,
+  player,
+  traffic: world.traffic,
+  audio,
+  onCrime: (points) => wanted.crime(points),
+});
+const vehicles = createVehicles({ geo, player, traffic: world.traffic, audio });
+const missions = createMissions({ scene, geo, player, world, layers, avatar, audio });
+player.weapons = weapons;
+player.missions = missions;
+const postfx = await createPostFX({ renderer, scene, camera });
+
+window.__gregorovce = {
+  THREE,
+  scene,
+  camera,
+  renderer,
+  geo,
+  world,
+  player,
+  layers,
+  avatar,
+  cameraRig,
+  radar,
+  dayNight,
+  weather,
+  audio,
+  weapons,
+  vehicles,
+  wanted,
+  missions,
+  postfx,
+};
 
 // Spawn on the road nearest the centre of the village, facing that centre.
 let centreX = 0;
@@ -77,6 +135,7 @@ const spawnYaw = drop
   ? Math.atan2(-(drop.faceX - drop.x), -(drop.faceZ - drop.z))
   : Math.atan2(-(villageCentre.x - spawn.x), -(villageCentre.z - spawn.z));
 player.setSpawn(drop ? drop.x : spawn.x, drop ? drop.z : spawn.z, spawnYaw);
+missions.load();
 
 const overlay = document.getElementById('overlay');
 const startButton = document.getElementById('start');
@@ -86,19 +145,53 @@ const speedLabel = document.getElementById('speed');
 const modeLabel = document.getElementById('mode');
 const clockLabel = document.getElementById('clock');
 const staminaFill = document.getElementById('stamina-fill');
+const moneyLabel = document.getElementById('money');
+const starsLabel = document.getElementById('stars');
+const weaponSlot = document.getElementById('weapon-slot');
+const weaponIcon = document.getElementById('weapon-icon');
+const zoneLabel = document.getElementById('zone');
+const missionLabel = document.getElementById('mission-message');
+const pauseMenu = document.getElementById('pause-menu');
+const pauseInfo = document.getElementById('pause-info');
 
 // World data and scene are built — enable PLAY and finish the loading bar.
 startButton.disabled = false;
 overlay.classList.add('ready');
 
 startButton.addEventListener('click', () => {
+  audio.resume();
   if (!player.started) player.dropFromSky();
   player.lock();
 });
 player.onLockChange = (locked) => {
   overlay.classList.toggle('hidden', locked);
   hud.classList.toggle('hidden', !locked);
+  pauseMenu.classList.toggle('hidden', locked || !player.started);
 };
+
+// Keyboard: camera mode, enter/exit car, weapons, weather, radio, bribe, save.
+document.addEventListener('keydown', (event) => {
+  if (event.code === 'KeyC') cameraRig.toggleMode();
+  if (event.code === 'KeyE') {
+    if (player.vehicle) vehicles.exit();
+    else vehicles.enter();
+  }
+  if (event.code === 'KeyV') weather.cycle();
+  if (event.code === 'KeyT') audio.toggleRadio();
+  if (event.code === 'KeyB') wanted.bribe();
+  if (event.code === 'F5') missions.save();
+  if (event.code === 'F9') missions.load();
+  if (/^Digit[1-9]$/.test(event.code)) weapons.select(Number(event.code.slice(5)) - 1);
+});
+document.addEventListener('mousedown', (event) => {
+  if (player.locked && event.button === 0) weapons.fire();
+});
+window.addEventListener(
+  'wheel',
+  (event) => cameraRig.zoom(Math.sign(event.deltaY) * 0.6),
+  { passive: true },
+);
+window.addEventListener('beforeunload', () => missions.save());
 
 // Touch controls (phones/tablets): floating joystick on the left, look drag on
 // the right, action buttons bottom-right.
@@ -125,6 +218,7 @@ if (player.touchMode) {
 
   layer.addEventListener('pointerdown', (event) => {
     if (event.target.closest('.tb')) return;
+    audio.resume();
     capture(layer, event);
     if (moveId === null && event.clientX < window.innerWidth * 0.45) {
       moveId = event.pointerId;
@@ -211,163 +305,82 @@ if (player.touchMode) {
       player.touchUp = 0;
     },
   );
-  document.getElementById('btn-fly').addEventListener('pointerdown', (event) => {
-    event.stopPropagation();
-    player.setFlying(!player.flying);
+  const tap = (id, action) => {
+    document.getElementById(id).addEventListener('pointerdown', (event) => {
+      event.stopPropagation();
+      action();
+    });
+  };
+  tap('btn-fly', () => player.setFlying(!player.flying));
+  tap('btn-menu', () => player.pause());
+  tap('btn-r', () => player.respawn());
+  tap('btn-camera', () => cameraRig.toggleMode());
+  tap('btn-enter', () => {
+    if (player.vehicle) vehicles.exit();
+    else vehicles.enter();
   });
-  document.getElementById('btn-menu').addEventListener('pointerdown', (event) => {
-    event.stopPropagation();
-    player.pause();
-  });
-  document.getElementById('btn-r').addEventListener('pointerdown', (event) => {
-    event.stopPropagation();
-    player.respawn();
-  });
+  tap('btn-fire', () => weapons.fire());
+  tap('btn-weapon', () => weapons.next());
 }
 
-// Static top-down minimap drawn once, with a live player marker on top.
-const minimap = document.createElement('canvas');
-minimap.width = canvas.width;
-minimap.height = canvas.height;
-drawMinimap(minimap.getContext('2d'), geo, layers, 1);
-const mapCtx = minimap.getContext('2d');
-
-function drawMinimap(context, geoRef, osm, scale) {
-  const { width, height } = context.canvas;
-  const size = geoRef.size;
-  const project = (x, z) => [
-    ((x + size.x / 2) / size.x) * width,
-    ((z + size.z / 2) / size.z) * height,
-  ];
-  context.clearRect(0, 0, width, height);
-  context.fillStyle = '#c9c07a';
-  context.fillRect(0, 0, width, height);
-  context.save();
-  context.scale(scale, scale);
-
-  context.strokeStyle = '#5c7340';
-  context.fillStyle = '#5c7340';
-  for (const forest of osm.forests) {
-    context.beginPath();
-    forest.latlon.forEach((p, i) => {
-      const w = geoRef.toWorld(p.lat, p.lon);
-      const [mx, my] = project(w.x, w.z);
-      if (i === 0) context.moveTo(mx, my);
-      else context.lineTo(mx, my);
-    });
-    context.fill();
-  }
-
-  context.fillStyle = '#d2c2a4';
-  for (const building of osm.buildings) {
-    context.beginPath();
-    building.latlon.forEach((p, i) => {
-      const w = geoRef.toWorld(p.lat, p.lon);
-      const [mx, my] = project(w.x, w.z);
-      if (i === 0) context.moveTo(mx, my);
-      else context.lineTo(mx, my);
-    });
-    context.fill();
-  }
-
-  context.strokeStyle = '#8e8a82';
-  context.lineWidth = 1.6;
-  for (const road of osm.roads) {
-    context.beginPath();
-    road.latlon.forEach((p, i) => {
-      const w = geoRef.toWorld(p.lat, p.lon);
-      const [mx, my] = project(w.x, w.z);
-      if (i === 0) context.moveTo(mx, my);
-      else context.lineTo(mx, my);
-    });
-    context.stroke();
-  }
-
-  context.strokeStyle = '#6a90a6';
-  context.lineWidth = 1.4;
-  for (const water of osm.waterways) {
-    context.beginPath();
-    water.latlon.forEach((p, i) => {
-      const w = geoRef.toWorld(p.lat, p.lon);
-      const [mx, my] = project(w.x, w.z);
-      if (i === 0) context.moveTo(mx, my);
-      else context.lineTo(mx, my);
-    });
-    context.stroke();
-  }
-
-  for (const area of osm.leisure) {
-    context.fillStyle = area.tags.leisure === 'pitch' ? '#7a9a4f' : '#c9b26a';
-    context.beginPath();
-    area.latlon.forEach((p, i) => {
-      const w = geoRef.toWorld(p.lat, p.lon);
-      const [mx, my] = project(w.x, w.z);
-      if (i === 0) context.moveTo(mx, my);
-      else context.lineTo(mx, my);
-    });
-    context.fill();
-  }
-
-  context.restore();
-}
-
-function drawPlayerMarker() {
-  const { width, height } = canvas;
-  const size = geo.size;
-  const x = ((player.position.x + size.x / 2) / size.x) * width;
-  const y = ((player.position.z + size.z / 2) / size.z) * height;
-  ctx.clearRect(0, 0, width, height);
-  ctx.drawImage(minimap, 0, 0);
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(-player.yaw);
-  // GTA radar blip: white arrow with a black outline.
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(0, -7);
-  ctx.lineTo(5, 6);
-  ctx.lineTo(0, 3);
-  ctx.lineTo(-5, 6);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
+// Pause menu buttons (Esc / MENU shows it once the game has started).
+for (const button of document.querySelectorAll('#pause-menu button')) {
+  button.addEventListener('click', () => {
+    const action = button.dataset.action;
+    if (action === 'resume') player.lock();
+    else if (action === 'map') pauseInfo.textContent = 'Gregorovce, Prešov — kostol, obchod, krčma, žumpa 217.';
+    else if (action === 'stats') {
+      pauseInfo.textContent = `Peniaze ${Math.floor(player.money)} € · Hviezdy ${wanted.state.level} · Misie ${missions.state.completed.length}`;
+    } else if (action === 'quit') location.reload();
+  });
 }
 
 const clock = new THREE.Clock();
 
-let lastMinute = -1;
-
 function updateHudStats() {
-  const now = new Date();
-  if (now.getMinutes() !== lastMinute) {
-    lastMinute = now.getMinutes();
-    clockLabel.textContent = now.toLocaleTimeString('sk-SK', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+  clockLabel.textContent = formatClock(dayNight.state.time);
   staminaFill.style.width = `${player.stamina * 100}%`;
+  moneyLabel.textContent = formatMoney(player.money);
+  starsLabel.textContent = starString(wanted.state.level);
+  starsLabel.style.color = wanted.state.level > 0 ? '#f0c53a' : '#9a9a9a';
+  weaponSlot.dataset.weapon = weapons.currentWeapon().name;
+  weaponIcon.textContent = weapons.icon();
+  zoneLabel.textContent = 'Gregorovce, Prešov';
+  missionLabel.textContent = missions.state.message;
 }
 
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   player.update(dt);
+  vehicles.update(dt);
   world.update(player.position, dt);
-  drawPlayerMarker();
+  dayNight.update(dt);
+  weather.update(dt, player.position);
+  wanted.update(dt);
+  weapons.update(dt);
+  missions.update(dt);
+
+  avatar.group.position.copy(player.position);
+  avatar.face(player.yaw);
+  avatar.update(player.currentSpeed, player.grounded, dt);
+  avatar.group.visible = cameraRig.state.mode === 'third-person' && !player.vehicle;
+
+  cameraRig.update(dt);
+  radar.draw(ctx, player);
   updateHudStats();
-  const targetFov = player.flying ? 80 : player.sprinting ? 76 : 70;
-  camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, 8, dt);
-  camera.updateProjectionMatrix();
 
   const here = geo.toLatLon(player.position.x, player.position.z);
   coords.textContent = `${here.lat.toFixed(5)}, ${here.lon.toFixed(5)}`;
   speedLabel.textContent = `${player.currentSpeed.toFixed(0)} m/s`;
-  modeLabel.textContent = player.flying ? 'Let (F)' : 'Chôdza';
+  modeLabel.textContent = player.vehicle
+    ? 'Auto'
+    : player.flying
+      ? 'Let (F)'
+      : cameraRig.state.mode === 'first-person'
+        ? 'Chôdza (1. os.)'
+        : 'Chôdza';
 
-  renderer.render(scene, camera);
+  postfx.render();
   requestAnimationFrame(tick);
 }
 

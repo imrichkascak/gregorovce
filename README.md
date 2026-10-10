@@ -1,8 +1,9 @@
-# Gregorovce 3D
+# Gregorovce 3D — GTA San Andreas edícia
 
-Interaktívna 3D vizualizácia obce **Gregorovce** (okres Prešov) v prehliadači — voľná
-prechádzka svetom ako v hre. Terén, budovy, cesty, potoky a lesy sú postavené
-z reálnych otvorených dát.
+Interaktívna 3D hra v prehliadači: obec **Gregorovce** (okres Prešov) pretvorená do
+štýlu **GTA: San Andreas** — terén, budovy, cesty, potoky a lesy z reálnych
+otvorených dát, ale s hrateľnosťou: postava v 3. osobe, autá, zbrane, wanted level
+s políciou, misie, obchody, deň/noc, počasie a rádio.
 
 Vizuál je ladený do GTA San Andreas: pastelový štuk, nízke škridlové strechy,
 sivý asfalt s dvojitou žltou čiarou a červenými obrubníkmi, palmy, suchý trávnik
@@ -17,24 +18,34 @@ npm install          # len raz (pngjs pre sťahovanie výšok)
 npm start            # spustí http://localhost:5173
 ```
 
-Otvor `http://localhost:5173` a klikni na **Vstúpiť do sveta**.
+Otvor `http://localhost:5173` a klikni na **PLAY**.
 
 ## Ovládanie
 
 | Klávesa | Akcia |
 | --- | --- |
-| `W` `A` `S` `D` | chôdza (pohľadom kamery, s rozbehom a zastavením) |
-| myš | rozhľad |
+| `W` `A` `S` `D` | chôdza / jazda autom (pohľadom kamery, s rozbehom a zastavením) |
+| myš | rozhľad (3. osoba), `klik` = streľba |
 | `Shift` | beh, kým vydrží stamina |
-| `Space` | skok |
-| `F` | prepni chôdzu a let (`Space` / `Ctrl` potom hore a dole) |
+| `Space` | skok (v aute brzda) |
+| `C` | prepni kameru 3. / 1. osoba |
+| `E` | vstúp / vystú z najbližšieho auta |
+| `1`–`4` | prepni zbraň (päsť, bejzbal, pištoľ, samopal) |
+| `V` | prepni počasie (jasno / zamračené / dážď) |
+| `T` | rádio zap/vyp |
+| `B` | úplatok (zníž wanted level) |
 | `R` | pád zhora na cestu pred kostol |
-| `Esc` | uvoľnenie myši |
+| `F5` / `F9` | ulož / načítaj hru |
+| `Esc` | pauza (menu) |
+
+**Systémy:** viditeľná postava v 3. osobe s animáciami, deň/noc a počasie, rádio,
+jazditeľné autá, zbrane a boj, wanted level s políciou, misijné markery a obchody,
+save/load, PS2 bloom.
 
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
-tlačidlá `↑` / `FLY` / `R` vpravo dole ovládajú skok, lietanie a pád pred kostol
-(`↓` sa ukáže až v lete), `MENU` vľavo hore sa vráti do menu.
+tlačidlá `KAM` (kamera), `E` (auto), `🔫` (streľba), `ZB` (zbraň), `↑` / `↓` / `FLY` /
+`R` vpravo dole, `MENU` vľavo hore sa vráti do menu.
 
 ## Ako to funguje
 
@@ -66,13 +77,32 @@ Klient (`src/`) potom:
 7. `gags.js` — dedinské scény v slučke: výbuch domu 101, Paly pridržiava Banana
    pred kostolom kým ho prejde auto, žumpa z bytovky 217 cez cestu do jarku.
 8. `labels.js` — plávajúce menovky (kostol, obchod, krčma, obecný úrad…).
-9. `world.js` — poskladá terén, cesty s čiarami a chodníkmi, potoky, polia, ihriská,
-   lesy, dopravu, štítky, oblohu a slnko.
-10. `player.js` — first-person ovládač (pointer lock, gravitácia, kolízia s budovami).
-11. `main.js` — poskladá scénu, HUD a minimapu.
+9. `world.js` — poskladá terén, cesty s čiarami a chodníkmi, pouličné lampy, potoky,
+   polia, ihriská, palmy, dopravu, štítky, oblohu a slnko.
+10. `motion.js` — zdieľaná horizontálna fyzika (rozbeh, trenie, vzduch).
+11. `player.js` — first-person/3rd-person ovládač (gravitácia, kolízia, stamina, pád z neba).
+12. `avatar.js` — CJ-style postava s procedurálnymi animáciami (idle/chôdza/beh/skok).
+13. `camera-rig.js` — kamera 3. osoby s kolíziou, zoomom a mierením.
+14. `radar.js` — otáčavý radar s blipmi POI, severkou a zónou.
+15. `daynight.js` — cyklus dňa/noci, slnko a pouličné svetlá.
+16. `weather.js` — počasie (jasno/zamračené/dážď).
+17. `audio.js` — procedurálny WebAudio: ambient, 3 rádiá, kroky/motor/výstrel.
+18. `weapons.js` — inventár zbraní, streľba, reakcie chodcov/áut.
+19. `vehicles.js` — vstup do auta a jazda.
+20. `wanted.js` — wanted level a policajná naháňačka.
+21. `missions.js` — misijné markery, obchody, save/load.
+22. `postfx.js` — jemný PS2 bloom (EffectComposer).
+23. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
+24. `main.js` — poskladá scénu, HUD a herný loop.
 
-Všetko je zlúčené do niekoľkých meshov, takže scéna má okolo 160 draw call-ov a zvládne
-aj slabší stroj.
+Všetko je zlúčené do niekoľkých meshov, takže scéna zvládne aj slabší stroj.
+
+## Overenie
+
+```bash
+npm test        # unit testy (motion, rules)
+npm run verify  # server + Playwright assertions pre všetky fázy (GTA-SA-PLAN.md)
+```
 
 ## Licencie a atribúcia
 

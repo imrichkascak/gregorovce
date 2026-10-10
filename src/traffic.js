@@ -59,7 +59,7 @@ function samplePath(geo, path, distance, lateral) {
   return { x, z, heading: Math.atan2(tx, tz) };
 }
 
-function buildCar() {
+export function buildCar() {
   const group = new THREE.Group();
   const bodyColor = new THREE.Color(CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)]);
 
@@ -170,6 +170,8 @@ export function createTraffic(geo, layers) {
         distance: ((index + k * 0.5) / (drivable.length * 2)) * entry.path.length,
         speed: 6 + hash(index * 3 + k) * 5,
         lateral: half,
+        health: 100,
+        state: 'drive',
       });
       group.add(car);
     }
@@ -191,6 +193,8 @@ export function createTraffic(geo, layers) {
       lateral: (hash(i * 7.7) - 0.5) * 3,
       phase: hash(i * 9.1) * Math.PI * 2,
       direction: hash(i * 1.3) > 0.5 ? 1 : -1,
+      health: 100,
+      state: 'walk',
     });
     group.add(person);
   }
@@ -199,8 +203,42 @@ export function createTraffic(geo, layers) {
 
   return {
     group,
+    cars,
+    peds: pedestrians,
+    /** Damage a pedestrian; dead ones lie down and stop. */
+    hitPed(person, damage) {
+      person.health = Math.max(0, person.health - damage);
+      if (person.health <= 0) {
+        person.state = 'dead';
+        person.object.rotation.z = Math.PI / 2;
+        person.object.position.y += 0.15;
+      } else {
+        person.state = 'flee';
+      }
+    },
+    /** Damage a car; wrecked cars stop dead. */
+    hitCar(car, damage) {
+      car.health = Math.max(0, car.health - damage);
+      if (car.health <= 0) {
+        car.state = 'wrecked';
+        car.speed = 0;
+      }
+    },
+    /** Everyone within `radius` of (x, z) runs away. */
+    panic(x, z, radius) {
+      for (const person of pedestrians) {
+        if (person.state === 'dead') continue;
+        const dx = person.object.position.x - x;
+        const dz = person.object.position.z - z;
+        if (dx * dx + dz * dz < radius * radius) {
+          person.state = 'flee';
+          person.direction = dx + dz > 0 ? 1 : -1;
+        }
+      }
+    },
     update(dt) {
       for (const car of cars) {
+        if (car.state === 'stolen' || car.state === 'wrecked') continue;
         car.distance += car.speed * dt;
         if (car.distance > car.path.length) car.distance -= car.path.length;
         const s = samplePath(geo, car.path, car.distance, car.lateral);
@@ -208,12 +246,14 @@ export function createTraffic(geo, layers) {
         car.object.rotation.y = s.heading;
       }
       for (const person of pedestrians) {
-        person.distance += person.direction * person.speed * dt;
+        if (person.state === 'dead') continue;
+        const speed = person.state === 'flee' ? person.speed * 2.4 : person.speed;
+        person.distance += person.direction * speed * dt;
         if (person.distance > person.path.length) person.distance -= person.path.length;
         if (person.distance < 0) person.distance += person.path.length;
         const s = samplePath(geo, person.path, person.distance, person.lateral);
         const ground = geo.heightAt(s.x, s.z);
-        const step = Math.sin((person.phase += dt * person.speed * 4));
+        const step = Math.sin((person.phase += dt * speed * 4));
         person.object.position.set(s.x, ground, s.z);
         person.object.rotation.y = s.heading + (person.direction < 0 ? Math.PI : 0);
         const { legs, arms } = person.object.userData.limbs;

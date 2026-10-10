@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import { pointInPolygon } from './geo.js';
 import { MOTION, stepHorizontal } from './motion.js';
 
-const EYE_HEIGHT = 1.7;
 const PLAYER_RADIUS = 0.5;
 const LOOK_SENSITIVITY = 0.0022;
 const COYOTE_TIME = 0.12;
@@ -40,6 +39,13 @@ export class Player {
     this.currentSpeed = 0;
     this.keys = new Set();
     this.sensitivity = LOOK_SENSITIVITY;
+    // Game state owned by the player and shown in the HUD.
+    this.health = 100;
+    this.armor = 0;
+    this.money = 350;
+    this.wanted = 0;
+    this.vehicle = null;
+    this.avatar = null;
     // Phones/tablets: no pointer lock — start directly and use touch controls.
     this.touchMode = window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
     this.touchMove = { x: 0, y: 0 };
@@ -161,15 +167,14 @@ export class Player {
     }
   }
 
-  writeCamera() {
-    this.camera.position.set(this.position.x, this.position.y + EYE_HEIGHT, this.position.z);
-    this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
-  }
-
   update(dt) {
     if (!this.started) {
       this.parkAtDrop();
-      this.writeCamera();
+      return;
+    }
+
+    if (this.vehicle) {
+      // Driving: vehicles.js owns movement; just refresh the camera.
       return;
     }
 
@@ -280,7 +285,5 @@ export class Player {
       }
       this.jumpHeld = jump;
     }
-
-    this.writeCamera();
   }
 }

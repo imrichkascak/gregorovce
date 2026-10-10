@@ -640,8 +640,8 @@ function walkPolyline(points, spacing, start, visit) {
   }
 }
 
-/** Wooden poles, sagging wires and sidewalk palms along the village streets. */
-function buildStreetKit(geo, roads) {
+/** Wooden poles, sagging wires, sidewalk palms and street lamps. */
+function buildStreetKit(geo, roads, streetlightMaterial) {
   const group = new THREE.Group();
   group.name = 'street-kit';
 
@@ -650,6 +650,8 @@ function buildStreetKit(geo, roads) {
   const poleArm = new THREE.BoxGeometry(1.5, 0.08, 0.08);
   poleArm.translate(0, 5.9, 0);
   const poleShape = mergeGeometries([polePost, poleArm], false);
+  const lampHead = new THREE.BoxGeometry(0.5, 0.22, 0.24);
+  lampHead.translate(0.7, 5.78, 0);
 
   const poles = [];
   const wire = [];
@@ -702,20 +704,22 @@ function buildStreetKit(geo, roads) {
   }
 
   if (poles.length) {
-    const mesh = new THREE.InstancedMesh(
+    const poleMesh = new THREE.InstancedMesh(
       poleShape,
       new THREE.MeshStandardMaterial({ color: '#6e5844', roughness: 1 }),
       poles.length,
     );
-    mesh.castShadow = true;
+    poleMesh.castShadow = true;
+    const lampMesh = new THREE.InstancedMesh(lampHead, streetlightMaterial, poles.length);
     const matrix = new THREE.Matrix4();
     const quat = new THREE.Quaternion();
     poles.forEach((pole, i) => {
       quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(pole.tx, pole.tz));
       matrix.compose(new THREE.Vector3(pole.x, pole.y, pole.z), quat, new THREE.Vector3(1, 1, 1));
-      mesh.setMatrixAt(i, matrix);
+      poleMesh.setMatrixAt(i, matrix);
+      lampMesh.setMatrixAt(i, matrix);
     });
-    group.add(mesh);
+    group.add(poleMesh, lampMesh);
   }
 
   if (wire.length) {
@@ -851,10 +855,19 @@ export function createWorld(scene, geo, layers) {
   scene.background = HORIZON.clone();
   scene.fog = new THREE.Fog(HORIZON.clone(), 700, 4800);
 
-  scene.add(buildSky());
+  const sky = buildSky();
+  scene.add(sky);
 
   const hemi = new THREE.HemisphereLight('#d5e2f2', '#c2ae88', 0.62);
   scene.add(hemi);
+
+  const sunDirection = SUN_DIR.clone();
+  const streetlightMaterial = new THREE.MeshStandardMaterial({
+    color: '#3a3a3a',
+    emissive: '#ffd28a',
+    emissiveIntensity: 0,
+    roughness: 0.6,
+  });
 
   const sun = new THREE.DirectionalLight('#fff4dd', 2.7);
   sun.castShadow = true;
@@ -872,7 +885,7 @@ export function createWorld(scene, geo, layers) {
 
   scene.add(buildTerrain(geo));
   scene.add(buildRoads(geo, layers.roads));
-  scene.add(buildStreetKit(geo, layers.roads));
+  scene.add(buildStreetKit(geo, layers.roads, streetlightMaterial));
   scene.add(buildWater(geo, layers.waterways));
 
   const forest = buildGroundPatches(geo, layers.forests, FOREST_FLOOR);
@@ -943,11 +956,16 @@ export function createWorld(scene, geo, layers) {
   return {
     colliders: built.colliders,
     sun,
+    hemi,
+    sky,
+    streetlightMaterial,
+    sunDirection,
+    traffic,
     npcSpawn: built.npcSpawn,
     gagAnchors: gags.anchors,
     dropSpawn: gags.anchors.drop ?? null,
     update(anchor, dt) {
-      sun.position.copy(anchor).addScaledVector(SUN_DIR, 1400);
+      sun.position.copy(anchor).addScaledVector(sunDirection, 1400);
       sun.target.position.copy(anchor);
       sun.target.updateMatrixWorld();
       traffic.update(dt);

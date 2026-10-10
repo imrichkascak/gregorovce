@@ -337,6 +337,81 @@
       #btn-down.hidden {
         display: none;
       }
+      #weapon-icon {
+        font-size: 26px;
+        line-height: 1;
+      }
+      #zone {
+        text-align: right;
+        font-size: 15px;
+        font-weight: 600;
+        color: #f2f0e0;
+        text-shadow: 1px 1px 0 #000;
+      }
+      #mission-message {
+        position: absolute;
+        top: 9%;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: "Anton", "Barlow Condensed", sans-serif;
+        font-size: 21px;
+        letter-spacing: 0.03em;
+        color: #ffd21e;
+        text-shadow: 2px 2px 0 #000;
+        pointer-events: none;
+      }
+      #pause-menu {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        min-width: 260px;
+        padding: 22px 28px;
+        background: rgba(10, 8, 6, 0.82);
+        border: 2px solid #000;
+        outline: 1px solid rgba(255, 214, 140, 0.35);
+        border-radius: 8px;
+        text-align: center;
+      }
+      #pause-menu.hidden {
+        display: none;
+      }
+      #pause-menu h2 {
+        margin: 0 0 8px;
+        font-family: "Anton", "Barlow Condensed", sans-serif;
+        font-size: 26px;
+        font-weight: 400;
+        color: #f0a13c;
+        text-shadow: 2px 2px 0 #000;
+      }
+      #pause-menu button {
+        font-family: "Barlow Condensed", system-ui, sans-serif;
+        font-size: 18px;
+        font-weight: 600;
+        padding: 10px 14px;
+        color: #1c1106;
+        background: #f0a13c;
+        border: 2px solid #000;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      #pause-menu button:hover {
+        background: #ffb95a;
+      }
+      #pause-info {
+        margin: 6px 0 0;
+        font-size: 14px;
+        color: #f2f0e0;
+      }
+      body.touch #touch-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
       /* Mobile/portrait: keep the loading-art character in frame, shrink the
          radar and tuck it under the top-right stats. */
       @media (orientation: portrait), (max-width: 720px) {
@@ -387,6 +462,10 @@
       <button id="btn-menu" class="tb">MENU</button>
       <div id="joystick-base"><div id="joystick-knob"></div></div>
       <div id="touch-buttons">
+        <button id="btn-camera" class="tb">KAM</button>
+        <button id="btn-enter" class="tb">E</button>
+        <button id="btn-fire" class="tb">🔫</button>
+        <button id="btn-weapon" class="tb">ZB</button>
         <button id="btn-jump" class="tb">&#8593;</button>
         <button id="btn-down" class="tb hidden">&#8595;</button>
         <button id="btn-fly" class="tb">FLY</button>
@@ -397,12 +476,7 @@
       <div id="gta-hud">
         <div id="stars">★★★★★★</div>
         <div id="status-row">
-          <div id="weapon-slot" title="Lupa">
-            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#f2ead0" stroke-width="2.4" stroke-linecap="round" aria-label="Lupa">
-              <circle cx="10.5" cy="10.5" r="6.5" />
-              <line x1="15.5" y1="15.5" x2="21" y2="21" />
-            </svg>
-          </div>
+          <div id="weapon-slot" title="Zbraň"><span id="weapon-icon">✊</span></div>
           <div id="clock">--:--</div>
         </div>
         <div id="stamina" title="Stamina"><div id="stamina-fill"></div></div>
@@ -413,15 +487,26 @@
           <span id="coords">—</span> · <span id="speed">0 m/s</span> · <span id="mode">Chôdza</span>
         </div>
         <canvas id="minimap" width="200" height="200"></canvas>
+        <div id="zone">Gregorovce, Prešov</div>
       </div>
+      <div id="mission-message"></div>
       <div id="keys">
-        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> pohyb &nbsp; <kbd>Shift</kbd> beh &nbsp; <kbd>Space</kbd> skok</div>
-        <div><kbd>F</kbd> let &nbsp; <kbd>R</kbd> pád pred kostol &nbsp; <kbd>Esc</kbd> myš</div>
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> pohyb &nbsp; <kbd>Shift</kbd> beh &nbsp; <kbd>Space</kbd> skok/brzda</div>
+        <div><kbd>C</kbd> kamera &nbsp; <kbd>E</kbd> auto &nbsp; <kbd>klik</kbd> streľba &nbsp; <kbd>1</kbd>–<kbd>4</kbd> zbraň</div>
+        <div><kbd>V</kbd> počasie &nbsp; <kbd>T</kbd> rádio &nbsp; <kbd>B</kbd> úplatok &nbsp; <kbd>R</kbd> pád &nbsp; <kbd>F5</kbd>/<kbd>F9</kbd> save/load &nbsp; <kbd>Esc</kbd> menu</div>
       </div>
     </div>
     <div id="overlay">
       <div id="menu-title">GTA GREGOROVCE</div>
       <button id="start" disabled>PLAY</button>
+      <div id="pause-menu" class="hidden">
+        <h2>PAUZA</h2>
+        <button data-action="resume">Pokračovať</button>
+        <button data-action="map">Mapa</button>
+        <button data-action="stats">Štatistiky</button>
+        <button data-action="quit">Ukončiť</button>
+        <p id="pause-info"></p>
+      </div>
       <div id="loading-row">
         <div id="loading-label">LOADING...</div>
         <div id="loading-bar"><div id="loading-fill"></div></div>
