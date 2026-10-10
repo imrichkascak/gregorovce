@@ -7,7 +7,7 @@ import { setAvatarShirtColor } from './avatar.js';
 const SHIRT_SHOP_COLORS = ['#f4f4f0', '#c43830', '#3f6e9e', '#3c7a44', '#e08a34', '#6e4a7a'];
 
 export function createMissions({ scene, geo, player, world, layers, avatar, audio }) {
-  const state = { active: null, completed: [], message: '' };
+  const state = { active: null, completed: [], message: '', objective: null };
   const markers = [];
   const shops = [];
   const missionMaterial = new THREE.MeshBasicMaterial({
@@ -26,12 +26,14 @@ export function createMissions({ scene, geo, player, world, layers, avatar, audi
   });
 
   function addMarker({ x, z, name, reward, kind }) {
-    const geometry = new THREE.CylinderGeometry(1.3, 1.3, 3, 18, 1, true);
-    const mesh = new THREE.Mesh(geometry, kind === 'shop' ? shopMaterial : missionMaterial);
+    // A tall, bright beam so it is easy to walk into.
+    const geometry = new THREE.CylinderGeometry(1.8, 1.8, 6, 20, 1, true);
+    const material = (kind === 'shop' ? shopMaterial : missionMaterial).clone();
+    const mesh = new THREE.Mesh(geometry, material);
     const ground = geo.heightAt(x, z);
-    mesh.position.set(x, ground + 1.5, z);
+    mesh.position.set(x, ground + 3, z);
     scene.add(mesh);
-    const record = { object: mesh, x, z, name, reward, kind };
+    const record = { object: mesh, material, x, z, name, reward, kind };
     (kind === 'shop' ? shops : markers).push(record);
     return record;
   }
@@ -154,28 +156,47 @@ export function createMissions({ scene, geo, player, world, layers, avatar, audi
     return dx * dx + dz * dz < distance * distance;
   }
 
+  function distanceTo(object) {
+    return Math.hypot(object.position.x - player.position.x, object.position.z - player.position.z);
+  }
+
+  const TRIGGER = 3.2;
+  let time = 0;
+
   function update(dt) {
+    time += dt;
     if (shopCooldown > 0) shopCooldown = Math.max(0, shopCooldown - dt);
 
     if (state.active) {
-      if (within(state.active.target.object, 2.5)) complete();
-      return;
-    }
-
-    for (const mission of missions) {
-      if (state.completed.includes(mission.name)) continue;
-      if (within(mission.start.object, 2.5)) {
-        start(mission);
-        return;
+      if (within(state.active.target.object, TRIGGER)) complete();
+    } else {
+      for (const mission of missions) {
+        if (state.completed.includes(mission.name)) continue;
+        if (within(mission.start.object, TRIGGER)) {
+          start(mission);
+          break;
+        }
+      }
+      if (!state.active) {
+        for (const shop of shops) {
+          if (within(shop.object, TRIGGER)) {
+            buy(shop);
+            break;
+          }
+        }
       }
     }
 
-    for (const shop of shops) {
-      if (within(shop.object, 2.5)) {
-        buy(shop);
-        return;
-      }
+    // Markers pulse; the active objective glows green.
+    for (const marker of markers) {
+      const isTarget = state.active && state.active.target === marker;
+      marker.material.opacity = 0.34 + Math.sin(time * 3 + marker.x) * 0.12;
+      marker.material.color.set(isTarget ? '#43e05a' : '#ffd21e');
     }
+
+    state.objective = state.active
+      ? { name: state.active.target.name, distance: distanceTo(state.active.target.object) }
+      : null;
   }
 
   return {

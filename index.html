@@ -351,15 +351,23 @@
       #mission-message {
         position: absolute;
         top: 9%;
-        left: 0;
-        right: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 80vw;
         text-align: center;
         font-family: "Anton", "Barlow Condensed", sans-serif;
         font-size: 21px;
         letter-spacing: 0.03em;
         color: #ffd21e;
+        background: rgba(10, 8, 6, 0.55);
+        border: 2px solid #000;
+        border-radius: 6px;
+        padding: 6px 18px;
         text-shadow: 2px 2px 0 #000;
         pointer-events: none;
+      }
+      #mission-message:empty {
+        display: none;
       }
       #pause-menu {
         position: absolute;
@@ -402,10 +410,13 @@
       #pause-menu button:hover {
         background: #ffb95a;
       }
-      #pause-info {
+      #pause-content {
         margin: 6px 0 0;
-        font-size: 14px;
+        font-size: 15px;
+        line-height: 1.5;
         color: #f2f0e0;
+        text-align: left;
+        min-height: 18px;
       }
       body.touch #touch-buttons {
         display: grid;
@@ -505,7 +516,7 @@
         <button data-action="map">Mapa</button>
         <button data-action="stats">Štatistiky</button>
         <button data-action="quit">Ukončiť</button>
-        <p id="pause-info"></p>
+        <div id="pause-content"></div>
       </div>
       <div id="loading-row">
         <div id="loading-label">LOADING...</div>

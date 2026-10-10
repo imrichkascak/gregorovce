@@ -152,7 +152,7 @@ const weaponIcon = document.getElementById('weapon-icon');
 const zoneLabel = document.getElementById('zone');
 const missionLabel = document.getElementById('mission-message');
 const pauseMenu = document.getElementById('pause-menu');
-const pauseInfo = document.getElementById('pause-info');
+const pauseContent = document.getElementById('pause-content');
 
 // World data and scene are built — enable PLAY and finish the loading bar.
 startButton.disabled = false;
@@ -328,9 +328,14 @@ for (const button of document.querySelectorAll('#pause-menu button')) {
   button.addEventListener('click', () => {
     const action = button.dataset.action;
     if (action === 'resume') player.lock();
-    else if (action === 'map') pauseInfo.textContent = 'Gregorovce, Prešov — kostol, obchod, krčma, žumpa 217.';
-    else if (action === 'stats') {
-      pauseInfo.textContent = `Peniaze ${Math.floor(player.money)} € · Hviezdy ${wanted.state.level} · Misie ${missions.state.completed.length}`;
+    else if (action === 'map') {
+      pauseContent.innerHTML =
+        '<b>Mapa — Gregorovce, Prešov</b><br>Kostol · Obchod · Krčma · Žumpa 217<br>Misie: žlté žiary, obchody: zelené.';
+    } else if (action === 'stats') {
+      pauseContent.innerHTML =
+        `<b>Štatistiky</b><br>Penize: ${Math.floor(player.money)} €<br>` +
+        `Hviezdy: ${wanted.state.level}/6<br>Misie: ${missions.state.completed.length}<br>` +
+        `Zdravie: ${Math.round(player.health)} · Auto: ${player.vehicle ? 'áno' : 'nie'}`;
     } else if (action === 'quit') location.reload();
   });
 }
@@ -346,7 +351,10 @@ function updateHudStats() {
   weaponSlot.dataset.weapon = weapons.currentWeapon().name;
   weaponIcon.textContent = weapons.icon();
   zoneLabel.textContent = 'Gregorovce, Prešov';
-  missionLabel.textContent = missions.state.message;
+  const objective = missions.state.objective;
+  missionLabel.textContent = objective
+    ? `${missions.state.message} → Cieľ: ${objective.name} (${objective.distance.toFixed(0)} m)`
+    : missions.state.message;
 }
 
 function tick() {

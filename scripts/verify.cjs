@@ -107,6 +107,14 @@ async function desktop() {
   check('F2 wanted crime raises level', f2.crimeWorked && f2.level >= 2, `level=${f2.level}`);
   check('F2 pause menu opens with >=4 items', f2.menuVisible && f2.menuItems >= 4, `items=${f2.menuItems}`);
 
+  await page.click('#pause-menu button[data-action="map"]');
+  const mapContent = await page.evaluate(() => document.getElementById('pause-content').textContent);
+  await page.click('#pause-menu button[data-action="stats"]');
+  const statsContent = await page.evaluate(() => document.getElementById('pause-content').textContent);
+  check('F2 pause menu Mapa shows content', mapContent.includes('Mapa'), mapContent.slice(0, 40));
+  check('F2 pause menu Štatistiky shows content', statsContent.includes('Štatistiky'), statsContent.slice(0, 40));
+  await page.evaluate(() => document.getElementById('overlay').classList.add('hidden'));
+
   // F3 — day/night, weather, audio
   const f3 = await page.evaluate(async () => {
     const { dayNight, weather, audio, scene } = window.__gregorovce;
@@ -181,28 +189,50 @@ async function desktop() {
   });
   check('F6 police units spawn for wanted level', f6.level >= 3 && f6.units >= 1, `level=${f6.level} units=${f6.units}`);
 
-  // F7 — missions markers + shops + save/load
+  // F7 — standing on a marker starts a mission; reaching the target rewards money
   const f7 = await page.evaluate(() => {
-    const { missions, player } = window.__gregorovce;
+    const { missions, player, geo } = window.__gregorovce;
+    const marker = missions.markers[0];
+    player.position.set(
+      marker.object.position.x,
+      geo.heightAt(marker.object.position.x, marker.object.position.z),
+      marker.object.position.z,
+    );
+    missions.update(0.016);
+    const started = missions.state.active?.name ?? null;
+    const hasObjective = Boolean(missions.state.objective);
     const money0 = player.money;
-    missions.start(missions.missions[0]);
-    missions.complete();
-    const rewarded = player.money > money0;
-    player.money = 1234;
-    missions.save();
-    player.money = 0;
-    const loaded = missions.load();
+    const target = missions.state.active.target;
+    player.position.set(
+      target.object.position.x,
+      geo.heightAt(target.object.position.x, target.object.position.z),
+      target.object.position.z,
+    );
+    missions.update(0.016);
     return {
       markers: missions.markers.length,
-      rewarded,
-      loaded,
-      money: player.money,
+      started,
+      hasObjective,
+      rewarded: player.money > money0,
+      completed: missions.state.completed.length,
       shops: missions.shops.length,
     };
   });
   check('F7 mission markers >= 3', f7.markers >= 3, `markers=${f7.markers}`);
-  check('F7 mission completion rewards money', f7.rewarded, `rewarded=${f7.rewarded}`);
-  check('F7 save + load restores money', f7.loaded && f7.money === 1234, `money=${f7.money}`);
+  check('F7 standing on marker starts mission', f7.started !== null, `started=${f7.started}`);
+  check('F7 active mission shows objective', f7.hasObjective, `hasObjective=${f7.hasObjective}`);
+  check('F7 reaching target rewards money', f7.rewarded, `rewarded=${f7.rewarded}`);
+
+  // F7 — save/load
+  const f7b = await page.evaluate(() => {
+    const { missions, player } = window.__gregorovce;
+    player.money = 1234;
+    missions.save();
+    player.money = 0;
+    const loaded = missions.load();
+    return { loaded, money: player.money };
+  });
+  check('F7 save + load restores money', f7b.loaded && f7b.money === 1234, `money=${f7b.money}`);
 
   // F8 — postfx + draw call budget
   const f8 = await page.evaluate(() => {
