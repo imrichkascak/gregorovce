@@ -181,28 +181,54 @@ priblížila zážitok k SA.
 
 ### Fáza 10 — Questy, dialógy a interaktivita na miestach
 
-- [ ] 10.1 Quest framework: definície questov (id, fázy, ciele, časové limity,
+- [x] 10.1 Quest framework: definície questov (id, fázy, ciele, časové limity,
       odmeny, fail/retry), stav `world.quests`, quest log v pause menu, waypoint
       na radare pre aktívny cieľ. **Kritérium:** `world.quests` má ≥ 1 definíciu;
       quest log zobrazí aktívny quest; radar blip cieľa.
-- [ ] 10.2 Dialógový systém: UI dialógu s voľbami (prijať/odmietnuť/pokračovať),
+      **Dôkaz:** `PASS F10 quest framework has >= 8 quests — defs=12`;
+      `PASS F10 quest log lists the quest — log=true`;
+      `PASS F10 active quest shows a radar waypoint — waypoint=true`;
+      `PASS F10 pause menu shows the quest log`; čistý stavový automat
+      `quests-core.js` (10 funkcií) so 6 unit testami.
+- [x] 10.2 Dialógový systém: UI dialógu s voľbami (prijať/odmietnuť/pokračovať),
       rečnícke postavy (quest giveri) ako 3D NPC s menovkou a bublinou, dialóg sa
       dá zavrieť. **Kritérium:** dialóg sa otvorí pri postave; voľba mení stav
       questu; ≥ 5 pomenovaných postáv v svete.
-- [ ] 10.3 Questy na miestach: ≥ 8 questov, každý ≥ 2 fázy (získať → urobiť →
+      **Dôkaz:** `PASS F10 >= 5 named quest givers — givers=10`;
+      `PASS F10 dialogue opens with choices — choices=2`;
+      `PASS F10 dialogue choice accepts the quest — accepted=true`;
+      `PASS F10 giver bubble tracks the quest state — swapped=true`; kláves F,
+      klik/tap a mobilné tlačidlo 💬; voľby aj cez Digit1..9.
+- [x] 10.3 Questy na miestach: ≥ 8 questov, každý ≥ 2 fázy (získať → urobiť →
       vrátiť sa), aspoň 1 quest alebo interaktivita na každom mieste (kostol,
       krčma, obchod, úrad, hasiči, škola, ihrisko, žumpa/dom 101); fail/retry.
       **Kritérium:** `world.quests.length ≥ 8`; `world.quests.locations` pokrýva
       všetky miesta; fail + retry overený.
-- [ ] 10.4 Odmeny, rešpekt a reťazenie: dokončenie questu mení `player.money`
+      **Dôkaz:** `PASS F10 quests cover all village spots — covered=true` (9 miest:
+      kostol, krčma, obchod, úrad, hasiči, škola, ihrisko, žumpa, dom 101);
+      `PASS F10 reaching the target advances the phase — phase=true`;
+      `PASS F10 side mission fails on the timer — failed=failed`;
+      `PASS F10 failed side mission can be retried — retried=active`; giveri a
+      ciele sa automaticky posúvajú k najbližšej ceste (`nearRoad`), aby boli
+      dostupné pešo a nie v strede budovy.
+- [x] 10.4 Odmeny, rešpekt a reťazenie: dokončenie questu mení `player.money`
       a `player.respect` (nová štatistika); aspoň 1 reťaz (quest B sa odomkne po
       dokončení A); odmeny sa líšia (peniaze/zbraň/oblečenie/odomknutie).
       **Kritérium:** `player.respect` rastie za quest; reťaz overená programovo.
-- [ ] 10.5 Vedľajšie misie a zberateľské predmety: SA-style side-misie
+      **Dôkaz:** `PASS F10 hand-in completes, rewards and chains — status=completed
+      rewarded=true chain=available`; odmeny: peniaze + rešpekt, náboje (Pištoľ),
+      oblečenie (tričko), odomknutie reťaze; reťaze `nakup → oheň` a
+      `zvony → palibrat` (`locked: true`).
+- [x] 10.5 Vedľajšie misie a zberateľské predmety: SA-style side-misie
       spustiteľné z ulice (napr. hasiči — hasenie, taxík — odvoz, strážca zákona
       — naháňačka) s úrovňami a odmenami; ≥ 10 zberateľských predmetov na mape
       s blipmi po objavení a odmenou za všetky. **Kritérium:** side-misia sa dá
       spustiť a dokončiť; `world.collectibles` ≥ 10 a zobranie mení počítadlo.
+      **Dôkaz:** `PASS F10 >= 3 side missions start on the street — side=3
+      status=active`; `PASS F10 >= 10 collectibles and picking one counts —
+      bottles=10 picked=true`; 3 uličné misie (taxík, hasenie, naháňačka) so
+      štartovacím kruhom a časovým limitom; 10 fliaš s HUD počítadlom a odmenou
+      500 € za všetky.
 
 ### Fáza 11 — Streľba, zbrane, pickupy
 
@@ -346,18 +372,22 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | Dátum | Fáza/úloha | Dôkaz | Stav |
 | --- | --- | --- | --- |
 | 2026-10-15 | F9.1–9.5 Bitky a živé NPC | `npm test` 14/14; `npm run verify` 42/42 (12 nových F9 checkov); screenshoty `/tmp/opencode/combat-fight.png`, `/tmp/opencode/combat-wasted.png`; commit `[GTA-SA-2] F9 …` | ✅ |
+| 2026-10-15 | F10.1–10.5 Questy, dialógy, interaktivita | `npm test` 20/20 (6 nových testov `quests-core.test.js`); `npm run verify` 57/57 (15 nových F10 checkov); 12 questov, 10 giverov, 9 miest, 3 uličné misie, 10 fliaš; screenshoty `/tmp/opencode/quest-giver.png`, `quest-dialogue.png`, `quest-log.png`; commit `[GTA-SA-2] F10 …` | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 
 | B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | B9 | B10 | B11 | B12 | B13 | B14 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2 | 1 | 2 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 1 | 1 |
+| 2 | 1 | 2 | 2 | 2 | 2 | 1 | 0 | 0 | 0 | 1 | 0 | 1 | 1 |
 
-Poznámky k skóre (po F9): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
-bránia + telá; WASTED + respawn + armor + nemocnica). B2 = 1 → dialógy a skupinky
-prinesie F10/F14. B4 = 1 → ≥ 8 miest s questom prinesie F10.3. B5 = 1 (bublina nad
-NPC) → UI s voľbami F10.2. B6 = 1 (počítadlo misií v pauze) → waypoint/fail/retry
-F10. B7 = 1 (4 zbrane, zásahy, krv) → mierenie/pickupy/drive-by F11. B8/B9 = 0 →
-pešia polícia a carjacking F12. B10 = 0 → interiéry F13.1. B11 = 1 (peniaze +
-health/armor v HUD) → rešpekt/skilly/stránka F13.2. B12 = 0 → cheaty F13.3. B13 = 1
-(3 stanice) → DJ/reklamy/sfx F13.4. B14 = 1 → zvieratá/AI reakcie/FPS check F14.
+Poznámky k skóre (po F10): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
+bránia + telá; WASTED + respawn + armor + nemocnica). B2 = 1 → bránia sa, telá a
+dialógy máme, chýbajú **skupinky** NPC (F14). B4 = 2 (9 miest s questom alebo
+interaktivitou: kostol, krčma, obchod, úrad, hasiči, škola, ihrisko, žumpa, dom
+101; fail + retry). B5 = 2 (bubliny + UI s voľbami + 10 giverov s menovkou).
+B6 = 2 (quest log, waypoint, fail/retry, odmeny, 2 reťaze). B7 = 1 (4 zbrane, zásahy,
+krv) → mierenie/pickupy/drive-by F11. B8/B9 = 0 → pešia polícia a carjacking F12.
+B10 = 0 → interiéry F13.1. B11 = 1 (peniaze + health/armor + rešpekt) → skilly a
+stránka v pauze F13.2. B12 = 0 → cheaty F13.3. B13 = 1 (3 stanice) →
+DJ/reklámy/sfx podľa zbrane F13.4. B14 = 1 → zvieratá/skupinky/AI reakcie/FPS
+check F14.

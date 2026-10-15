@@ -153,6 +153,51 @@
         color: #c01c1c;
         text-shadow: 4px 4px 0 #000, -2px -2px 0 rgba(0, 0, 0, 0.6);
       }
+      #dialogue {
+        position: fixed;
+        left: 50%;
+        bottom: 90px;
+        transform: translateX(-50%);
+        width: min(620px, 92vw);
+        background: rgba(12, 14, 18, 0.92);
+        border: 2px solid #000;
+        border-radius: 4px;
+        padding: 14px 18px;
+        z-index: 5;
+      }
+      #dialogue.hidden {
+        display: none;
+      }
+      #dialogue-name {
+        font-family: "Anton", "Barlow Condensed", sans-serif;
+        font-size: 20px;
+        letter-spacing: 0.04em;
+        color: #f0c53a;
+      }
+      #dialogue-text {
+        margin: 6px 0 10px;
+        font-size: 15px;
+        line-height: 1.35;
+        color: #e8e4dc;
+      }
+      #dialogue-choices {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      #dialogue-choices button {
+        font-family: inherit;
+        font-size: 14px;
+        padding: 6px 12px;
+        color: #f4f2ec;
+        background: rgba(52, 62, 74, 0.95);
+        border: 2px solid #000;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #dialogue-choices button:hover {
+        background: rgba(76, 92, 110, 0.95);
+      }
       #money {
         font-family: "Anton", "Barlow Condensed", sans-serif;
         font-size: 27px;
@@ -529,6 +574,11 @@
     <div id="crosshair"></div>
     <div id="hitmarker" class="hidden">✕</div>
     <div id="wasted" class="hidden"><span>WASTED</span></div>
+    <div id="dialogue" class="hidden">
+      <div id="dialogue-name"></div>
+      <div id="dialogue-text"></div>
+      <div id="dialogue-choices"></div>
+    </div>
     <div id="touch-layer">
       <button id="btn-menu" class="tb">MENU</button>
       <div id="joystick-base"><div id="joystick-knob"></div></div>
@@ -536,6 +586,7 @@
         <button id="btn-camera" class="tb">KAM</button>
         <button id="btn-enter" class="tb">E</button>
         <button id="btn-fire" class="tb">🔫</button>
+        <button id="btn-talk" class="tb hidden">💬</button>
         <button id="btn-weapon" class="tb">ZB</button>
         <button id="btn-jump" class="tb">&#8593;</button>
         <button id="btn-down" class="tb hidden">&#8595;</button>
@@ -565,7 +616,7 @@
       <div id="mission-message"></div>
       <div id="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> pohyb &nbsp; <kbd>Shift</kbd> beh &nbsp; <kbd>Space</kbd> skok/brzda</div>
-        <div><kbd>C</kbd> kamera &nbsp; <kbd>E</kbd> auto &nbsp; <kbd>klik</kbd> streľba/úder &nbsp; <kbd>1</kbd>–<kbd>4</kbd> zbraň</div>
+        <div><kbd>C</kbd> kamera &nbsp; <kbd>E</kbd> auto &nbsp; <kbd>F</kbd> rozhovor &nbsp; <kbd>klik</kbd> streľba/úder &nbsp; <kbd>1</kbd>–<kbd>4</kbd> zbraň</div>
         <div><kbd>V</kbd> počasie &nbsp; <kbd>T</kbd> rádio &nbsp; <kbd>B</kbd> úplatok &nbsp; <kbd>R</kbd> pád &nbsp; <kbd>F5</kbd>/<kbd>F9</kbd> save/load &nbsp; <kbd>Esc</kbd> menu</div>
       </div>
     </div>
@@ -578,6 +629,7 @@
         <button data-action="resume">Pokračovať</button>
         <button data-action="map">Mapa</button>
         <button data-action="stats">Štatistiky</button>
+        <button data-action="quests">Questy</button>
         <button data-action="quit">Ukončiť</button>
         <div id="pause-content"></div>
       </div>

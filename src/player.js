@@ -44,6 +44,7 @@ export class Player {
     this.health = 100;
     this.armor = 0;
     this.money = 350;
+    this.respect = 0;
     this.wanted = 0;
     this.vehicle = null;
     this.avatar = null;

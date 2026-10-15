@@ -72,7 +72,7 @@ export function createRadar(geo, layers, size = 200) {
 
   const state = { rotates: true, zoom: 3.6 };
 
-  function draw(ctx, player) {
+  function draw(ctx, player, extras = []) {
     const { width, height } = ctx.canvas;
     const px = ((player.position.x + geo.size.x / 2) / geo.size.x) * size;
     const py = ((player.position.z + geo.size.z / 2) / geo.size.z) * size;
@@ -93,6 +93,18 @@ export function createRadar(geo, layers, size = 200) {
       ctx.beginPath();
       ctx.arc(blip.x, blip.y, 1.6 / state.zoom, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // Quest waypoint (blinking) and collectibles ride on top of the blips.
+    for (const extra of extras) {
+      const [ex, ey] = project(extra.x, extra.z);
+      const blink = extra.color === '#ffd21e' ? 0.6 + Math.sin(extra.x + Date.now() * 0.006) * 0.4 : 1;
+      ctx.globalAlpha = blink;
+      ctx.fillStyle = extra.color;
+      ctx.beginPath();
+      ctx.arc(ex, ey, (extra.radius ?? 1.4) / state.zoom, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
     ctx.restore();
 

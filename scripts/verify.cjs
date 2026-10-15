@@ -381,6 +381,118 @@ async function desktop() {
   check('F9 death shows WASTED overlay and empty health bar', wastedShown.overlay && wastedShown.dead && wastedShown.bar === '0%', `shown=${wastedShown.overlay} bar=${wastedShown.bar}`);
   check('F9 respawn clears WASTED overlay', wastedCleared, `cleared=${wastedCleared}`);
 
+  // F10 — quest framework, dialogues, quests at spots, rewards, chains
+  const f10 = await page.evaluate(() => {
+    const { player, world, geo, dialogue } = window.__gregorovce;
+    const quests = world.quests;
+    const required = ['kostol', 'krčma', 'obchod', 'úrad', 'hasiči', 'škola', 'ihrisko', 'žumpa', 'dom 101'];
+    const covered = required.every((key) => quests.locations.includes(key));
+    const namedGivers = quests.givers.filter((giver) => giver.name.length > 2).length;
+
+    // Talk to the church giver, accept the quest through the dialogue choices.
+    const def = quests.defs.find((d) => d.id === 'zvony');
+    const giver = quests.givers.find((g) => g.id === def.giver);
+    player.position.set(giver.x, geo.heightAt(giver.x, giver.z + 2), giver.z + 2);
+    const talked = quests.interact();
+    const opened = dialogue.state.open;
+    const choices = dialogue.state.choices.length;
+    dialogue.choose('accept');
+    const closed = !dialogue.state.open;
+    const accepted = quests.state.quests.find((q) => q.id === 'zvony').status === 'active';
+    const bubbleBefore = giver.bubble.material.map;
+    quests.update(0.1);
+    const bubbleSwapped = giver.bubble.material.map !== bubbleBefore;
+    const waypoint = quests.extras().some((extra) => extra.color === '#ffd21e');
+
+    // Reach the phase target, then hand the quest in at the giver.
+    const target = quests.spots[def.phases[0].target];
+    player.position.set(target.x, geo.heightAt(target.x, target.z), target.z);
+    quests.update(0.1);
+    const phaseAdvanced = quests.state.quests.find((q) => q.id === 'zvony').phase === 1;
+    const moneyBefore = player.money;
+    const respectBefore = player.respect;
+    player.position.set(giver.x, geo.heightAt(giver.x, giver.z + 2), giver.z + 2);
+    quests.interact();
+    dialogue.choose('complete');
+    const done = quests.state.quests.find((q) => q.id === 'zvony');
+    const rewarded = player.money > moneyBefore && player.respect > respectBefore;
+    const chained = quests.state.quests.find((q) => q.id === 'palibrat').status;
+    const logRows = quests.log();
+    const logHasCompleted = logRows.some((row) => row.id === 'zvony' && row.status === 'completed');
+
+    return {
+      defs: quests.defs.length,
+      covered,
+      namedGivers,
+      talked,
+      opened,
+      choices,
+      closed,
+      accepted,
+      bubbleSwapped,
+      waypoint,
+      phaseAdvanced,
+      completed: done.status,
+      rewarded,
+      chained,
+      logHasCompleted,
+    };
+  });
+  check('F10 quest framework has >= 8 quests', f10.defs >= 8, `defs=${f10.defs}`);
+  check('F10 quests cover all village spots', f10.covered, `covered=${f10.covered}`);
+  check('F10 >= 5 named quest givers', f10.namedGivers >= 5, `givers=${f10.namedGivers}`);
+  check('F10 dialogue opens with choices', f10.talked && f10.opened && f10.choices >= 2, `choices=${f10.choices}`);
+  check('F10 dialogue choice accepts the quest', f10.accepted && f10.closed, `accepted=${f10.accepted}`);
+  check('F10 giver bubble tracks the quest state', f10.bubbleSwapped, `swapped=${f10.bubbleSwapped}`);
+  check('F10 active quest shows a radar waypoint', f10.waypoint, `waypoint=${f10.waypoint}`);
+  check('F10 reaching the target advances the phase', f10.phaseAdvanced, `phase=${f10.phaseAdvanced}`);
+  check('F10 hand-in completes, rewards and chains', f10.completed === 'completed' && f10.rewarded && f10.chained === 'available', `status=${f10.completed} rewarded=${f10.rewarded} chain=${f10.chained}`);
+  check('F10 quest log lists the quest', f10.logHasCompleted, `log=${f10.logHasCompleted}`);
+
+  // F10 — side missions (start on the street, fail and retry), collectibles, log page
+  const f10b = await page.evaluate(() => {
+    const { player, world, geo } = window.__gregorovce;
+    const quests = world.quests;
+    const marker = quests.sideMarkers[0];
+    player.position.set(marker.x, geo.heightAt(marker.x, marker.z), marker.z);
+    quests.update(0.1);
+    const sideActive = quests.state.quests.find((q) => q.id === marker.id).status;
+
+    // Wander off so the timer can run out without re-triggering the marker.
+    const away = quests.givers[0];
+    player.position.set(away.x, geo.heightAt(away.x, away.z), away.z);
+    quests.update(1000);
+    const failed = quests.state.quests.find((q) => q.id === marker.id).status;
+
+    player.position.set(marker.x, geo.heightAt(marker.x, marker.z), marker.z);
+    quests.update(0.1);
+    const retried = quests.state.quests.find((q) => q.id === marker.id).status;
+
+    // Collect a bottle.
+    const bottle = quests.collectibles.find((c) => !c.taken);
+    const before = quests.collected();
+    player.position.set(bottle.x, geo.heightAt(bottle.x, bottle.z), bottle.z);
+    quests.update(0.1);
+    const picked = quests.collected() > before;
+
+    return {
+      sideCount: quests.sideMarkers.length,
+      bottles: quests.collectibles.length,
+      sideActive,
+      failed,
+      retried,
+      picked,
+    };
+  });
+  check('F10 >= 3 side missions start on the street', f10b.sideCount >= 3 && f10b.sideActive === 'active', `side=${f10b.sideCount} status=${f10b.sideActive}`);
+  check('F10 side mission fails on the timer', f10b.failed === 'failed', `failed=${f10b.failed}`);
+  check('F10 failed side mission can be retried', f10b.retried === 'active', `retried=${f10b.retried}`);
+  check('F10 >= 10 collectibles and picking one counts', f10b.bottles >= 10 && f10b.picked, `bottles=${f10b.bottles} picked=${f10b.picked}`);
+
+  await page.evaluate(() => document.querySelector('#pause-menu button[data-action="quests"]').click());
+  const questPage = await page.evaluate(() => document.getElementById('pause-content').textContent);
+  check('F10 pause menu shows the quest log', questPage.includes('Zvony pre kostol'), questPage.slice(0, 70));
+
   check('no console errors', errors.length === 0, errors.join(' | '));
   await browser.close();
 }

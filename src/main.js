@@ -17,6 +17,8 @@ import { createEffects } from './effects.js';
 import { createVehicles } from './vehicles.js';
 import { createWanted } from './wanted.js';
 import { createMissions } from './missions.js';
+import { createQuests } from './quests.js';
+import { createDialogue } from './dialogue.js';
 import { createPostFX } from './postfx.js';
 import { formatClock, formatMoney, stars as starString } from './rules.js';
 
@@ -100,6 +102,14 @@ const vehicles = createVehicles({ geo, player, traffic: world.traffic, audio });
 const missions = createMissions({ scene, geo, player, world, layers, avatar, audio });
 player.weapons = weapons;
 player.missions = missions;
+// Questy: givers with dialogues, side missions and collectible bottles. The
+// dialogue module needs the quests module for its choice bridge, so it goes first.
+let quests = null;
+const dialogue = createDialogue({ onChoice: (choiceId, info) => quests?.choose(choiceId, info) });
+quests = createQuests({ scene, geo, player, world, layers, avatar, audio, dialogue });
+player.quests = quests;
+world.quests = quests;
+world.collectibles = quests.collectibles;
 const postfx = await createPostFX({ renderer, scene, camera });
 
 window.__gregorovce = {
@@ -122,6 +132,8 @@ window.__gregorovce = {
   vehicles,
   wanted,
   missions,
+  quests,
+  dialogue,
   postfx,
 };
 
@@ -179,6 +191,7 @@ const healthFill = document.getElementById('health-fill');
 const armorFill = document.getElementById('armor-fill');
 const hitMarker = document.getElementById('hitmarker');
 const wastedOverlay = document.getElementById('wasted');
+const btnTalk = document.getElementById('btn-talk');
 const pauseMenu = document.getElementById('pause-menu');
 const pauseContent = document.getElementById('pause-content');
 
@@ -206,18 +219,26 @@ player.onLockChange = (locked) => {
   pauseMenu.classList.toggle('hidden', locked || !player.started);
 };
 
-// Keyboard: camera mode, enter/exit car, weapons, weather, radio, bribe, save.
+// Keyboard: dialogue choices, camera mode, enter/exit car, weapons, weather, radio, bribe, save.
 document.addEventListener('keydown', (event) => {
+  if (dialogue.handleKey(event.code)) return;
   if (event.code === 'KeyC') cameraRig.toggleMode();
   if (event.code === 'KeyE') {
     if (player.vehicle) vehicles.exit();
     else vehicles.enter();
   }
+  if (event.code === 'KeyF') quests.interact();
   if (event.code === 'KeyV') weather.cycle();
   if (event.code === 'KeyT') audio.toggleRadio();
   if (event.code === 'KeyB') wanted.bribe();
-  if (event.code === 'F5') missions.save();
-  if (event.code === 'F9') missions.load();
+  if (event.code === 'F5') {
+    missions.save();
+    quests.save();
+  }
+  if (event.code === 'F9') {
+    missions.load();
+    quests.load();
+  }
   if (/^Digit[1-9]$/.test(event.code)) weapons.select(Number(event.code.slice(5)) - 1);
 });
 document.addEventListener('mousedown', (event) => {
@@ -228,7 +249,10 @@ window.addEventListener(
   (event) => cameraRig.zoom(Math.sign(event.deltaY) * 0.6),
   { passive: true },
 );
-window.addEventListener('beforeunload', () => missions.save());
+window.addEventListener('beforeunload', () => {
+  missions.save();
+  quests.save();
+});
 
 // Touch controls (phones/tablets): floating joystick on the left, look drag on
 // the right, action buttons bottom-right.
@@ -358,6 +382,7 @@ if (player.touchMode) {
   });
   tap('btn-fire', () => weapons.fire());
   tap('btn-weapon', () => weapons.next());
+  tap('btn-talk', () => quests.interact());
 }
 
 // Pause menu buttons (Esc / MENU shows it once the game has started).
@@ -372,7 +397,28 @@ for (const button of document.querySelectorAll('#pause-menu button')) {
       pauseContent.innerHTML =
         `<b>Štatistiky</b><br>Penize: ${Math.floor(player.money)} €<br>` +
         `Hviezdy: ${wanted.state.level}/6<br>Misie: ${missions.state.completed.length}<br>` +
+        `Questy: ${quests.log().filter((row) => row.status === 'completed').length}/${quests.defs.length}<br>` +
+        `Rešpekt: ${player.respect}<br>` +
         `Zdravie: ${Math.round(player.health)} · Auto: ${player.vehicle ? 'áno' : 'nie'}`;
+    } else if (action === 'quests') {
+      const labels = {
+        available: 'k dispozícii',
+        active: 'aktívny',
+        completed: 'splnený',
+        failed: 'zlyhal',
+      };
+      const rows = quests.log();
+      pauseContent.innerHTML =
+        '<b>Questy</b><br>' +
+        (rows.length
+          ? rows
+              .map((row) => {
+                const time = row.timeLeft === null ? '' : ` (${Math.ceil(row.timeLeft)} s)`;
+                const phase = row.status === 'active' ? ` — ${row.phaseText}${time}` : '';
+                return `${row.name} [${row.location}]: ${labels[row.status] ?? row.status}${phase}`;
+              })
+              .join('<br>')
+          : 'Zatiaľ žiadne questy. Postavy s ! nad hlavou čakajú na dedine.');
     } else if (action === 'quit') location.reload();
   });
 }
@@ -391,10 +437,23 @@ function updateHudStats() {
   weaponSlot.dataset.weapon = weapons.currentWeapon().name;
   weaponIcon.textContent = weapons.icon();
   zoneLabel.textContent = 'Gregorovce, Prešov';
-  const objective = missions.state.objective;
-  missionLabel.textContent = objective
-    ? `${missions.state.message} → Cieľ: ${objective.name} (${objective.distance.toFixed(0)} m)`
-    : missions.state.message;
+  const questMessage = quests.state.messageTimer > 0 ? quests.state.message : '';
+  const questObjective = quests.state.objective;
+  const missionObjective = missions.state.objective;
+  if (questMessage) {
+    missionLabel.textContent = questMessage;
+  } else if (questObjective) {
+    const time =
+      questObjective.timeLeft === null ? '' : ` (${Math.ceil(questObjective.timeLeft)} s)`;
+    missionLabel.textContent =
+      `Misia: ${questObjective.name} — ${questObjective.phaseText}${time}` +
+      ` → Cieľ: ${questObjective.distance.toFixed(0)} m`;
+  } else if (missionObjective) {
+    missionLabel.textContent =
+      `${missions.state.message} → Cieľ: ${missionObjective.name} (${missionObjective.distance.toFixed(0)} m)`;
+  } else {
+    missionLabel.textContent = missions.state.message;
+  }
 }
 
 function tick() {
@@ -408,6 +467,8 @@ function tick() {
   weapons.update(dt);
   effects.update(dt);
   missions.update(dt);
+  quests.update(dt);
+  btnTalk.classList.toggle('hidden', !quests.state.nearGiver || dialogue.state.open);
 
   if (player.dead !== wasDead) {
     wasDead = player.dead;
@@ -421,7 +482,7 @@ function tick() {
   avatar.group.visible = cameraRig.state.mode === 'third-person' && !player.vehicle;
 
   cameraRig.update(dt);
-  radar.draw(ctx, player);
+  radar.draw(ctx, player, quests.extras());
   updateHudStats();
 
   const here = geo.toLatLon(player.position.x, player.position.z);

@@ -35,18 +35,21 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | `T` | rádio zap/vyp |
 | `B` | úplatok (zníž wanted level) |
 | `R` | pád zhora na cestu pred kostol |
+| `F` | rozhovor s postavou / prijmi quest (voľby aj `1`–`9`) |
 | `F5` / `F9` | ulož / načítaj hru |
-| `Esc` | pauza (menu) |
+| `Esc` | pauza (menu, questy) |
 
 **Systémy:** viditeľná postava v 3. osobe s animáciami, deň/noc a počasie, rádio,
 jazditeľné autá, zbrane a boj (melee kombo, knockdown, krv), bitky s NPC
 (chuligáni sa bránia), zdravie a armor hráča, WASTED smrť s respawnom v nemocnici,
-wanted level s políciou, misijné markery a obchody, save/load, PS2 bloom.
+wanted level s políciou, misijné markery a obchody, **questy a dialógy** (12 questov,
+10 pomenovaných postáv, quest log v pauze, waypoint na radare, rešpekt, reťaze,
+3 uličné misie, 10 fliaš), save/load, PS2 bloom.
 
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
-tlačidlá `KAM` (kamera), `E` (auto), `🔫` (úder / streľba), `ZB` (zbraň), `↑` / `↓` / `FLY` /
-`R` vpravo dole, `MENU` vľavo hore sa vráti do menu.
+tlačidlá `KAM` (kamera), `E` (auto), `🔫` (úder / streľba), `ZB` (zbraň), `💬`
+(rozhovor), `↑` / `↓` / `FLY` / `R` vpravo dole, `MENU` vľavo hore sa vráti do menu.
 
 ## Ako to funguje
 
@@ -92,19 +95,23 @@ Klient (`src/`) potom:
 18. `combat.js` — čistá logika boja (armor pohltenie, melee kužeľ, combo okno) + unit testy.
 19. `weapons.js` — inventár zbraní, melee údery s combom, streľba, reakcie chodcov/áut.
 20. `effects.js` — poolované častice (krv, dym), 1 draw call na druh.
-21. `vehicles.js` — vstup do auta a jazda.
-22. `wanted.js` — wanted level a policajná naháňačka.
-23. `missions.js` — misijné markery, obchody, save/load.
-24. `postfx.js` — jemný PS2 bloom (EffectComposer).
-25. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
-26. `main.js` — poskladá scénu, HUD a herný loop.
+21. `quests-core.js` — čistý stavový automat questov (fázy, fail/retry, reťaze) + unit testy.
+22. `dialogue.js` — dialógové okno s číslovanými voľbami (klik/tap/`1`–`9`).
+23. `quests.js` — 12 questov, 10 quest giverov s menovkou a bublinou, quest log,
+    radar waypoint, rešpekt, 3 uličné misie, 10 fliaš.
+24. `vehicles.js` — vstup do auta a jazda.
+25. `wanted.js` — wanted level a policajná naháňačka.
+26. `missions.js` — misijné markery, obchody, save/load.
+27. `postfx.js` — jemný PS2 bloom (EffectComposer).
+28. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
+29. `main.js` — poskladá scénu, HUD a herný loop.
 
 Všetko je zlúčené do niekoľkých meshov, takže scéna zvládne aj slabší stroj.
 
 ## Overenie
 
 ```bash
-npm test        # unit testy (motion, rules)
+npm test        # unit testy (motion, rules, combat, quests-core)
 npm run verify  # server + Playwright assertions pre všetky fázy (GTA-SA-PLAN.md, GTA-SA-PLAN-2.md)
 ```
 
