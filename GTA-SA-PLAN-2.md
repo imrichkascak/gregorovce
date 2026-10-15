@@ -349,10 +349,25 @@ priblížila zážitok k SA.
       1,5 km pešo, 32,4 km autom, 6 questov, 3 misie, 41 úderov/7 KO,
       zločiny 6 max 3★, zatknutia 1, smrti 2, autá 4, zarobil 5820 €,
       minul 2180 €, rešpekt 58, peniaze 1350 €, hviezdy 2/6, zdravie 82).
-- [ ] 13.3 Cheaty: ≥ 6 kódov (zdravie+armor, zbrane+munícia, spawn auta,
+- [x] 13.3 Cheaty: ≥ 6 kódov (zdravie+armor, zbrane+munícia, spawn auta,
       počasie, čas, wanted dole, …) zapísaných na klávesnici, HUD potvrdenie
       „CHEAT“, a oprav starý over-claim F4.3 (plán 1 tvrdí cheat na auto).
       **Kritérium:** každý cheat má programový efekt; F4.3 overený.
+      **Dôkaz:** `PASS F13 six or more cheat codes exist — codes=8`;
+      `PASS F13 every cheat code changes the game — {"zdravie":true,"zbrane":
+      true,"auto":true,"pocasie":true,"hodiny":true,"policia":true,
+      "penieze":true,"let":true}`; `PASS F13 typing a code on the keyboard
+      fires it — typed=true early=true late=true` (žiadny predčasný trigger pri
+      dlhšom kóde); `PASS F13 cheat shows a HUD confirmation — toast=CHEAT:
+      POČASIE OVERCAST`; `PASS F13 cheat list is available for touch —
+      rows=8`. F4.3 v `GTA-SA-PLAN.md` opravený (over-claim priznaný,
+      dodané F13.3). `src/cheats.js`: 8 kódov — `ZDRAVIE` (zdravie+vesta),
+      `ZBRANE` (všetky zbrane + munícia), `AUTO` (`traffic.spawnCar` postaví
+      auto na najbližšiu cestu), `POCASIE` (`weather.cycle`), `HODINY`
+      (čas +6 h), `POLICIA` (`wanted.clear`), `PENIAZE` (+10 000 €),
+      `LET` (prepne lietanie); písanie na klávesnici (buffer 12 znakov,
+      `matchCode` na konci), HUD toast `#cheat-toast`, dotyková stránka
+      „Cheaty“ v pauze (8 tlačidiel).
 - [ ] 13.4 Rádio a zvuk hlbšie: ≥ 5 staníc (žánre), DJ hlásenia medzi
       skladbami a reklamy (procedurálne), sfx podľa zbrane (brokovnica/AK/
       ostreľovačka znejú inak), motor podľa typu. **Kritérium:**
@@ -449,12 +464,13 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | 2026-10-15 | F12.1–12.4 Polícia a vozidlá hlbšie | `npm test` 20/20; `npm run verify` 77/77 (11 nových F12 checkov); peší policajti (2 na hliadku, max 6) strieľajú a zatknú s pokutou + BUSTED overlay, roadblocky od 4 hviezd, úkryt 30 s bez dohľadu zhodí hviezdu, lakovacia garáž pri obchode vynuluje wanted, motorky/bicykle medzi 24 vozidlami, carjacking s vyskakujúcim vodičom, výbuch auta (oheň/dym/boom), dopravná AI (spomalenie + trúbenie, chodci uskakujú), blikajúca siréna; screenshoty `/tmp/opencode/f12-police.png`, `f12-roadblock.png`, `f12-garage.png`; commit `[GTA-SA-2] F12 …` | ✅ |
 | 2026-10-15 | F13.1 Interiéry (kostol, krčma, obchod, úrad) | `npm test` 20/20; `npm run verify` 82/82 (5 nových F13 checkov); 4 miestnosti s obsahom + NPC + interakciou, menovky „F vstup“ pri budovách, vstup/výstup overený (`inside=true`, `doorDistance=0.0`); `src/interiors.js` | ✅ |
 | 2026-10-15 | F13.2 Štatistiky hráča | `npm test` 26/26 (6 nových testov `stats.test.js`); `npm run verify` 90/90 (8 nových F13 checkov); 14 počítadiel, rešpekt +1 za KO, živé riadky stránky „Štatistiky“ v pauze, uloženie `gregorovce.stats`; screenshot `/tmp/opencode/f13-stats.png` (16 riadkov) | ✅ |
+| 2026-10-15 | F13.3 Cheaty | `npm test` 31/31 (5 nových testov `cheats.test.js`); `npm run verify` 95/95 (5 nových F13 checkov); 8 kódov (ZDRAVIE, ZBRANE, AUTO, POCASIE, HODINY, POLICIA, PENIAZE, LET) s efektom, HUD toast „CHEAT: …“, dotyková stránka „Cheaty“ v pauze, opravený over-claim F4.3 v `GTA-SA-PLAN.md` | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 
 | B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | B9 | B10 | B11 | B12 | B13 | B14 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 1 | 1 |
+| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 1 | 1 |
 
 Poznámky k skóre (po F12): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
 bránia + telá; WASTED + respawn + armor + nemocnica). B2 = 1 → bránia sa, telá a
@@ -471,5 +487,8 @@ miestnosťou, NPC, interakciou a výstupom späť pred budovu; F13.1).
 B11 = 2 (peniaze + health/armor + rešpekt + 14 počítadiel štatistík —
 čas, km pešo/autom, questy, misie, bitky, KO, zločiny, hviezdy, zatknutia,
 smrti, autá, zárobok/útrata — a stránka „Štatistiky“ v pauze so živými
-hodnotami, uložená v localStorage; F13.2). B12 = 0 → cheaty F13.3. B13 = 1 (3 stanice + sfx podľa
+hodnotami, uložená v localStorage; F13.2). B12 = 2 (8 kódov s programovým
+efektom — zdravie+vesta, všetky zbrane, auto, počasie, čas, polícia, peniaze,
+lietanie — písané na klávesnici s HUD potvrdením „CHEAT“ a dotykovou stránkou
+„Cheaty“ v pauze; F13.3). B13 = 1 (3 stanice + sfx podľa
 zbrane) → DJ/reklámy F13.4. B14 = 1 → zvieratá/skupinky/AI reakcie/FPS check F14.

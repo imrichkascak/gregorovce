@@ -20,6 +20,7 @@ import { createMissions } from './missions.js';
 import { createQuests } from './quests.js';
 import { createInteriors } from './interiors.js';
 import { createStatsTracker } from './stats.js';
+import { createCheats } from './cheats.js';
 import { createPickups } from './pickups.js';
 import { createDialogue } from './dialogue.js';
 import { createPostFX } from './postfx.js';
@@ -148,6 +149,16 @@ const statsTracker = createStatsTracker({
   missions,
   vehicleSpeed: () => vehicles.state.speed,
 });
+// Cheaty: písané kódy na klávesnici (+ dotyková stránka „Cheaty“ v pauze).
+const cheats = createCheats({
+  player,
+  weapons,
+  wanted,
+  weather,
+  dayNight,
+  traffic: world.traffic,
+  audio,
+});
 // Doprava: trúbenie a výbuch auta rieši main.js (traffic nevie o efektoch).
 world.traffic.hooks.onHorn = () => audio.playSfx('horn');
 world.traffic.hooks.onCarWrecked = (car) => {
@@ -184,6 +195,7 @@ window.__gregorovce = {
   dialogue,
   interiors,
   stats: statsTracker,
+  cheats,
   postfx,
   syncAimHud,
 };
@@ -246,6 +258,7 @@ const hitMarker = document.getElementById('hitmarker');
 const wastedOverlay = document.getElementById('wasted');
 const bustedOverlay = document.getElementById('busted');
 const bustedFine = document.getElementById('busted-fine');
+const cheatToast = document.getElementById('cheat-toast');
 const btnTalk = document.getElementById('btn-talk');
 const pauseMenu = document.getElementById('pause-menu');
 const pauseContent = document.getElementById('pause-content');
@@ -308,6 +321,7 @@ document.addEventListener('keydown', (event) => {
   }
   if (/^Digit[1-9]$/.test(event.code)) weapons.select(Number(event.code.slice(5)) - 1);
   if (event.code === 'Digit0') weapons.select(9);
+  if (player.locked) cheats.handleKey(event.key);
 });
 document.addEventListener('mousedown', (event) => {
   if (!player.locked) return;
@@ -504,6 +518,16 @@ for (const button of document.querySelectorAll('#pause-menu button')) {
               })
               .join('<br>')
           : 'Zatiaľ žiadne questy. Postavy s ! nad hlavou čakajú na dedine.');
+    } else if (action === 'cheats') {
+      pauseContent.innerHTML =
+        '<b>Cheaty</b><br>Kódy sa píšu na klávesnici (na mobile ťukni na kód):<br>' +
+        cheats
+          .rows()
+          .map((row) => `<button class="cheat-row" data-cheat="${row.id}">${row.code} — ${row.label}</button>`)
+          .join('');
+      for (const cheatButton of pauseContent.querySelectorAll('[data-cheat]')) {
+        cheatButton.addEventListener('click', () => cheats.activate(cheatButton.dataset.cheat));
+      }
     } else if (action === 'quit') location.reload();
   });
 }
@@ -563,6 +587,13 @@ function tick() {
   quests.update(dt);
   interiors.update(dt);
   statsTracker.update(dt);
+  cheats.update(dt);
+  if (cheats.state.toastTimer > 0) {
+    if (cheatToast.textContent !== cheats.state.toast) cheatToast.textContent = cheats.state.toast;
+    cheatToast.classList.remove('hidden');
+  } else {
+    cheatToast.classList.add('hidden');
+  }
   // Stránka „Štatistiky“ v pauze sa obnovuje, aby ukazovala živé hodnoty.
   if (pausePage === 'stats' && !pauseMenu.classList.contains('hidden')) {
     statsRefresh -= dt;

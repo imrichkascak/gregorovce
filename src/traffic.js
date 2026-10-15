@@ -525,6 +525,43 @@ export function createTraffic(geo, layers) {
       car.state = 'stolen';
       return true;
     },
+    /**
+     * Cheat `AUTO`: postaví auto na najbližší bod cesty pri (x, z). Vráti nové
+     * vozidlo alebo null, keď je hráč príliš ďaleko od ciest.
+     */
+    spawnCar(x, z, type = 'car') {
+      let best = null;
+      for (const entry of drivable) {
+        for (let d = 0; d < entry.path.length; d += 8) {
+          const point = samplePath(geo, entry.path, d, 0);
+          const dist = Math.hypot(point.x - x, point.z - z);
+          if (!best || dist < best.dist) best = { entry, d, dist };
+        }
+      }
+      if (!best) return null;
+      const car = BUILDERS[type]();
+      const half = Math.max(0.6, roadWidth(best.entry.road.tags) / 2 - 1.1) * LATERAL[type];
+      const [base, spread] = PACE[type];
+      const spawn = samplePath(geo, best.entry.path, best.d, half);
+      car.position.set(spawn.x, geo.heightAt(spawn.x, spawn.z), spawn.z);
+      car.rotation.y = spawn.heading;
+      const unit = {
+        object: car,
+        type,
+        path: best.entry.path,
+        distance: best.d,
+        speed: base + spread * 0.5,
+        lateral: half,
+        health: 100,
+        state: 'drive',
+        hitCooldown: 0,
+        brakeTimer: 0,
+        hornTimer: 0,
+      };
+      cars.push(unit);
+      group.add(car);
+      return unit;
+    },
     /** Everyone within `radius` of (x, z) runs away; `exclude` is spared. */
     panic(x, z, radius, exclude = null) {
       for (const person of pedestrians) {

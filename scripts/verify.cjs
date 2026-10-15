@@ -863,6 +863,87 @@ async function desktop() {
   check('F13 stats page shows live rows', f132.rowCount >= 6 && f132.rowsOk && f132.liveMoney, `rows=${f132.rowCount}`);
   check('F13 stats save and load', f132.saved, `saved=${f132.saved}`);
 
+  // F13.3 — cheaty: kódy, efekty a HUD potvrdenie
+  const f133 = await page.evaluate(async () => {
+    const { player, weapons, wanted, weather, dayNight, world, cheats } = window.__gregorovce;
+    const result = {};
+    result.codes = cheats.codes.length;
+    const effects = {};
+
+    // ZDRAVIE — doplní zdravie a vestu.
+    player.health = 20;
+    player.armor = 0;
+    cheats.activate('zdravie');
+    effects.zdravie = player.health === 100 && player.armor === 100;
+
+    // ZBRANE — pridá muníciu.
+    const pistol = weapons.list.find((weapon) => weapon.id === 'pistol');
+    const ammoBefore = pistol.ammo;
+    cheats.activate('zbrane');
+    effects.zbrane = pistol.ammo > ammoBefore;
+
+    // AUTO — pribudne auto v premávke.
+    const carsBefore = world.traffic.cars.length;
+    cheats.activate('auto');
+    effects.auto = world.traffic.cars.length > carsBefore;
+
+    // POCASIE — prehodí počasie.
+    const weatherBefore = weather.state.name;
+    cheats.activate('pocasie');
+    effects.pocasie = weather.state.name !== weatherBefore;
+
+    // HODINY — posunie čas o 6 hodín.
+    const timeBefore = dayNight.state.time;
+    cheats.activate('hodiny');
+    effects.hodiny = (((dayNight.state.time - timeBefore) % 1440) + 1440) % 1440 === 360;
+
+    // POLICIA — zmaže hviezdy.
+    wanted.crime(3);
+    cheats.activate('policia');
+    effects.policia = wanted.state.level === 0;
+
+    // PENIAZE — pridá 10 000 €.
+    const moneyBefore = player.money;
+    cheats.activate('peniaze');
+    effects.penieze = player.money >= moneyBefore + 10000;
+
+    // LET — prepne lietanie.
+    const flyingBefore = player.flying;
+    cheats.activate('let');
+    effects.let = player.flying !== flyingBefore;
+    player.setFlying(flyingBefore);
+
+    result.effects = effects;
+    result.allEffects = Object.values(effects).every(Boolean);
+
+    // Písanie na klávesnici: kód sa chytí až na konci.
+    player.health = 30;
+    for (const key of 'zdravie') cheats.handleKey(key);
+    result.typed = player.health === 100;
+
+    // Dlhší kód nesmie spustiť kratší predčasne.
+    const weatherBefore2 = weather.state.name;
+    for (const key of 'pocas') cheats.handleKey(key);
+    result.noEarlyTrigger = weather.state.name === weatherBefore2;
+    for (const key of 'ie') cheats.handleKey(key);
+    result.lateTrigger = weather.state.name !== weatherBefore2;
+
+    result.toast = cheats.state.toast;
+    result.used = cheats.state.used;
+    result.rows = cheats.rows().length;
+    return result;
+  });
+  await page.waitForTimeout(150);
+  const cheatToastShown = await page.evaluate(() => {
+    const element = document.getElementById('cheat-toast');
+    return !!element && !element.classList.contains('hidden') && element.textContent.length > 0;
+  });
+  check('F13 six or more cheat codes exist', f133.codes >= 6, `codes=${f133.codes}`);
+  check('F13 every cheat code changes the game', f133.allEffects, JSON.stringify(f133.effects));
+  check('F13 typing a code on the keyboard fires it', f133.typed && f133.noEarlyTrigger && f133.lateTrigger, `typed=${f133.typed} early=${f133.noEarlyTrigger} late=${f133.lateTrigger}`);
+  check('F13 cheat shows a HUD confirmation', cheatToastShown, `toast=${f133.toast}`);
+  check('F13 cheat list is available for touch', f133.rows >= 6, `rows=${f133.rows}`);
+
   check('no console errors', errors.length === 0, errors.join(' | '));
   await browser.close();
 }

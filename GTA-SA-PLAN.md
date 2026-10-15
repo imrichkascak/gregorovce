@@ -114,6 +114,10 @@ Poradie je zvolené tak, aby každá fáza viditeľne priblížila zážitok k S
       **Kritérium:** `camera.mode === 'vehicle'`; náraz zníži `vehicle.health`; rádiová stanica hrá.
 - [x] 4.3 Cheat na spawn auta + hustejšia premávka.
       **Kritérium:** cheat spawn vytvorí auto; počet áut v `traffic.cars` rastie.
+      *Oprava over-claimu (F13.3, 2026-10-15): pôvodné odškrtnutie bolo
+      nepodložené — žiadny cheat v Fáze 4 v kóde nebol (grep na `cheat` bol
+      prázdny). Reálne ho dodala F13.3: kód `AUTO` (`traffic.spawnCar`),
+      overené `PASS F13 every cheat code changes the game — {"auto":true}`.*
 - **Human gate 4:** screenshot jazdy → človek potvrdí pocit z jazdy.
 
 ### Fáza 5 — Zbrane a boj
