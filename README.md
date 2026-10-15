@@ -25,7 +25,7 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | Klávesa | Akcia |
 | --- | --- |
 | `W` `A` `S` `D` | chôdza / jazda autom (pohľadom kamery, s rozbehom a zastavením) |
-| myš | rozhľad (3. osoba), `klik` = streľba |
+| myš | rozhľad (3. osoba), `klik` = úder / streľba |
 | `Shift` | beh, kým vydrží stamina |
 | `Space` | skok (v aute brzda) |
 | `C` | prepni kameru 3. / 1. osoba |
@@ -39,12 +39,13 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | `Esc` | pauza (menu) |
 
 **Systémy:** viditeľná postava v 3. osobe s animáciami, deň/noc a počasie, rádio,
-jazditeľné autá, zbrane a boj, wanted level s políciou, misijné markery a obchody,
-save/load, PS2 bloom.
+jazditeľné autá, zbrane a boj (melee kombo, knockdown, krv), bitky s NPC
+(chuligáni sa bránia), zdravie a armor hráča, WASTED smrť s respawnom v nemocnici,
+wanted level s políciou, misijné markery a obchody, save/load, PS2 bloom.
 
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
-tlačidlá `KAM` (kamera), `E` (auto), `🔫` (streľba), `ZB` (zbraň), `↑` / `↓` / `FLY` /
+tlačidlá `KAM` (kamera), `E` (auto), `🔫` (úder / streľba), `ZB` (zbraň), `↑` / `↓` / `FLY` /
 `R` vpravo dole, `MENU` vľavo hore sa vráti do menu.
 
 ## Ako to funguje
@@ -73,7 +74,8 @@ Klient (`src/`) potom:
 5. `buildings.js` — postaví domy (steny + sedlová strecha), kostol s vežou, ihlou
    a krížom (veža smeruje k ceste), a tabule pre obchod/krčmu. Dom č. 101 sa
    do statického mesh-u nedáva — ten rozbíja `gags.js`.
-6. `traffic.js` — nízko-polygónové autá a chodci, ktorí sa pohybujú po cestách.
+6. `traffic.js` — nízko-polygónové autá a chodci, ktorí sa pohybujú po cestách,
+   reagujú na útoky (stagger, knockdown, vstanú), chuligáni sa bijú a autá zrážajú hráča.
 7. `gags.js` — dedinské scény v slučke: výbuch domu 101, Paly pridržiava Banana
    pred kostolom kým ho prejde auto, žumpa z bytovky 217 cez cestu do jarku.
 8. `labels.js` — plávajúce menovky (kostol, obchod, krčma, obecný úrad…).
@@ -87,13 +89,15 @@ Klient (`src/`) potom:
 15. `daynight.js` — cyklus dňa/noci, slnko a pouličné svetlá.
 16. `weather.js` — počasie (jasno/zamračené/dážď).
 17. `audio.js` — procedurálny WebAudio: ambient, 3 rádiá, kroky/motor/výstrel.
-18. `weapons.js` — inventár zbraní, streľba, reakcie chodcov/áut.
-19. `vehicles.js` — vstup do auta a jazda.
-20. `wanted.js` — wanted level a policajná naháňačka.
-21. `missions.js` — misijné markery, obchody, save/load.
-22. `postfx.js` — jemný PS2 bloom (EffectComposer).
-23. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
-24. `main.js` — poskladá scénu, HUD a herný loop.
+18. `combat.js` — čistá logika boja (armor pohltenie, melee kužeľ, combo okno) + unit testy.
+19. `weapons.js` — inventár zbraní, melee údery s combom, streľba, reakcie chodcov/áut.
+20. `effects.js` — poolované častice (krv, dym), 1 draw call na druh.
+21. `vehicles.js` — vstup do auta a jazda.
+22. `wanted.js` — wanted level a policajná naháňačka.
+23. `missions.js` — misijné markery, obchody, save/load.
+24. `postfx.js` — jemný PS2 bloom (EffectComposer).
+25. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
+26. `main.js` — poskladá scénu, HUD a herný loop.
 
 Všetko je zlúčené do niekoľkých meshov, takže scéna zvládne aj slabší stroj.
 
@@ -101,7 +105,7 @@ Všetko je zlúčené do niekoľkých meshov, takže scéna zvládne aj slabší
 
 ```bash
 npm test        # unit testy (motion, rules)
-npm run verify  # server + Playwright assertions pre všetky fázy (GTA-SA-PLAN.md)
+npm run verify  # server + Playwright assertions pre všetky fázy (GTA-SA-PLAN.md, GTA-SA-PLAN-2.md)
 ```
 
 ## Licencie a atribúcia
