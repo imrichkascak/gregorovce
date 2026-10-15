@@ -752,6 +752,48 @@ async function desktop() {
   check('F12 pedestrians dodge cars', f12.dodge, `dodge=${f12.dodge}`);
   check('F12 police siren flashes', f12.siren, `flash=${f12.flash}`);
 
+  // F13.1 — interiéry: vstupy, obsah a výstup
+  const f13 = await page.evaluate(async () => {
+    const { player, geo, world, interiors } = window.__gregorovce;
+    const result = {};
+    result.count = world.interiors.length;
+    result.allInteractive = world.interiors.every((room) => room.interactions.length >= 1);
+    const room = world.interiors.find((r) => r.id === 'kostol');
+
+    // Pri dverách sa ponúkne vstup.
+    player.position.set(room.door.x, geo.heightAt(room.door.x, room.door.z), room.door.z);
+    interiors.update(0.1);
+    result.nearDoor = interiors.state.nearDoor === 'kostol';
+
+    // Vstup dnu (od dverí, ako v hre).
+    const entered = interiors.enter('kostol');
+    const dx = player.position.x - room.center.x;
+    const dz = player.position.z - room.center.z;
+    result.entered = entered && interiors.state.inside === 'kostol' && Math.hypot(dx, dz) < 8;
+
+    // Interakcia vnútri (sviečka pridá zdravie).
+    player.position.set(room.interact.x, room.ground + 0.2, room.interact.z);
+    player.health = 40;
+    const interacted = interiors.interact();
+    result.interacted = interacted && player.health > 40 && interiors.state.interactions > 0;
+    result.health = player.health;
+
+    // Výstup von pred budovu (späť tam, kde hráč stál pri vstupe).
+    player.position.set(room.exit.x, room.ground + 0.2, room.exit.z);
+    const exited = interiors.interact();
+    const bx = player.position.x - room.door.x;
+    const bz = player.position.z - room.door.z;
+    result.exited = exited && interiors.state.inside === null && Math.hypot(bx, bz) < 5;
+    result.doorDistance = Math.hypot(bx, bz);
+
+    return result;
+  });
+  check('F13 interiors >= 4 each with an interaction', f13.count >= 4 && f13.allInteractive, `interiors=${f13.count}`);
+  check('F13 entering a building puts the player inside', f13.entered, `inside=${f13.entered}`);
+  check('F13 interior interaction changes the player', f13.interacted, `health=${f13.health}`);
+  check('F13 exiting returns the player to the door', f13.exited, `doorDistance=${Number(f13.doorDistance).toFixed(1)}`);
+  check('F13 standing at a door offers entry', f13.nearDoor, `nearDoor=${f13.nearDoor}`);
+
   check('no console errors', errors.length === 0, errors.join(' | '));
   await browser.close();
 }

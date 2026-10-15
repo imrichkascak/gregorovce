@@ -311,10 +311,22 @@ priblížila zážitok k SA.
 
 ### Fáza 13 — Interiéry, štatistiky, cheaty, rádio
 
-- [ ] 13.1 Interiéry: vstupy do aspoň 4 budov (kostol, krčma, obchod, úrad),
+- [x] 13.1 Interiéry: vstupy do aspoň 4 budov (kostol, krčma, obchod, úrad),
       interiér scéna s obsahom (NPC/dialóg/minihra), výstup späť pred budovu.
       **Kritérium:** `world.interiors.length ≥ 4`; vstup/výstup flow overený;
       každý interiér má aspoň 1 interakciu.
+      **Dôkaz:** `PASS F13 interiors >= 4 each with an interaction —
+      interiors=4`; `PASS F13 entering a building puts the player inside —
+      inside=true`; `PASS F13 interior interaction changes the player —
+      health=65` (sviečka v kostole +25); `PASS F13 exiting returns the
+      player to the door — doorDistance=0.0`; `PASS F13 standing at a door
+      offers entry — nearDoor=true`. `src/interiors.js`: 4 miestnosti
+      (kostol/krčma/obchod/úrad) na najplochšej časti mapy
+      (`findFlatBase`, 9×3 bunky výškovej mapy), každá má steny
+      s kolíziami, pult/oltár, NPC a zlatý marker; v dedine je pri každej
+      budove menovka „F vstup“ (sprite), vstup cez `F`/💬 a výstup pri
+      dverách; interakcie: sviečka (+25 zdravie), pivo (+10 zdravie, −5 $),
+      vesta (+50 armor, −100 $), potvrdenie (+5 rešpekt), cooldown 12 s.
 - [ ] 13.2 Štatistiky hráča: stránka „Štatistiky“ v pause menu — rešpekt, skilly,
       najazdené/odchodené km, questy, zločiny, peniaze, hviezdy, čas hry;
       rešpekt rastie za questy/bitky; štatistiky sa ukladajú.
@@ -417,12 +429,13 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | 2026-10-15 | F10.1–10.5 Questy, dialógy, interaktivita | `npm test` 20/20 (6 nových testov `quests-core.test.js`); `npm run verify` 57/57 (15 nových F10 checkov); 12 questov, 10 giverov, 9 miest, 3 uličné misie, 10 fliaš; screenshoty `/tmp/opencode/quest-giver.png`, `quest-dialogue.png`, `quest-log.png`; commit `[GTA-SA-2] F10 …` | ✅ |
 | 2026-10-15 | F11.1–11.5 Streľba, zbrane, pickupy | `npm test` 20/20; `npm run verify` 66/66 (9 nových F11 checkov); 10 zbraní (melee 3, strelné 5, projektily 2), mierenie s kamerou cez rameno, 8 pickupov s respawnom, tracery/nábojnice/diery po guľkách, výbuchy, drive-by s vyskakujúcim vodičom; screenshoty `/tmp/opencode/f11-aim.png`, `f11-boom.png`, `f11-pickup.png`; commit `[GTA-SA-2] F11 …` | ✅ |
 | 2026-10-15 | F12.1–12.4 Polícia a vozidlá hlbšie | `npm test` 20/20; `npm run verify` 77/77 (11 nových F12 checkov); peší policajti (2 na hliadku, max 6) strieľajú a zatknú s pokutou + BUSTED overlay, roadblocky od 4 hviezd, úkryt 30 s bez dohľadu zhodí hviezdu, lakovacia garáž pri obchode vynuluje wanted, motorky/bicykle medzi 24 vozidlami, carjacking s vyskakujúcim vodičom, výbuch auta (oheň/dym/boom), dopravná AI (spomalenie + trúbenie, chodci uskakujú), blikajúca siréna; screenshoty `/tmp/opencode/f12-police.png`, `f12-roadblock.png`, `f12-garage.png`; commit `[GTA-SA-2] F12 …` | ✅ |
+| 2026-10-15 | F13.1 Interiéry (kostol, krčma, obchod, úrad) | `npm test` 20/20; `npm run verify` 82/82 (5 nových F13 checkov); 4 miestnosti s obsahom + NPC + interakciou, menovky „F vstup“ pri budovách, vstup/výstup overený (`inside=true`, `doorDistance=0.0`); `src/interiors.js` | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 
 | B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | B9 | B10 | B11 | B12 | B13 | B14 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 1 | 0 | 1 | 1 |
+| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 1 | 0 | 1 | 1 |
 
 Poznámky k skóre (po F12): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
 bránia + telá; WASTED + respawn + armor + nemocnica). B2 = 1 → bránia sa, telá a
@@ -434,6 +447,8 @@ mierenie s crosshairom a kamerou cez rameno, zásahy NPC/áut, pickupy, drive-by
 tracery/nábojnice/diery, výbuchy, zvuk podľa zbrane). B8 = 2 (pešia polícia +
 streľba + roadblocky + pokuty + lakovacia garáž + hľadanie/úkryt + úplatok).
 B9 = 2 (carjacking s vodičom, motorky, bicykle, poškodenie aj výbuch áut).
-B10 = 0 → interiéry F13.1. B11 = 1 (peniaze + health/armor + rešpekt) → skilly a
+B10 = 2 (4 interiéry — kostol, krčma, obchod, úrad — s vlastnou
+miestnosťou, NPC, interakciou a výstupom späť pred budovu; F13.1).
+B11 = 1 (peniaze + health/armor + rešpekt) → skilly a
 stránka v pauze F13.2. B12 = 0 → cheaty F13.3. B13 = 1 (3 stanice + sfx podľa
 zbrane) → DJ/reklámy F13.4. B14 = 1 → zvieratá/skupinky/AI reakcie/FPS check F14.

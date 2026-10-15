@@ -18,6 +18,7 @@ import { createVehicles } from './vehicles.js';
 import { createWanted } from './wanted.js';
 import { createMissions } from './missions.js';
 import { createQuests } from './quests.js';
+import { createInteriors } from './interiors.js';
 import { createPickups } from './pickups.js';
 import { createDialogue } from './dialogue.js';
 import { createPostFX } from './postfx.js';
@@ -115,6 +116,16 @@ world.quests = quests;
 world.collectibles = quests.collectibles;
 const pickups = createPickups({ scene, geo, player, weapons, audio, spots: quests.spots });
 world.pickups = pickups.list;
+// Interiéry: vstupy do kostola, krčmy, obchodu a úradu (+ obsah a výstup).
+const interiors = createInteriors({
+  scene,
+  geo,
+  player,
+  audio,
+  spots: quests.spots,
+  colliders: world.colliders,
+});
+world.interiors = interiors.list;
 // Polícia: hliadky, peší policajti, zátarasy a lakovacia garáž pri obchode.
 const wanted = createWanted({
   scene,
@@ -160,6 +171,7 @@ window.__gregorovce = {
   missions,
   quests,
   dialogue,
+  interiors,
   postfx,
   syncAimHud,
 };
@@ -263,7 +275,9 @@ document.addEventListener('keydown', (event) => {
     if (player.vehicle) vehicles.exit();
     else vehicles.enter();
   }
-  if (event.code === 'KeyF') quests.interact();
+  if (event.code === 'KeyF') {
+    if (!interiors.interact()) quests.interact();
+  }
   if (event.code === 'KeyV') weather.cycle();
   if (event.code === 'KeyT') audio.toggleRadio();
   if (event.code === 'KeyB') wanted.bribe();
@@ -426,7 +440,9 @@ if (player.touchMode) {
   tap('btn-fire', () => weapons.fire());
   tap('btn-aim', () => weapons.setAiming(!weapons.state.aiming));
   tap('btn-weapon', () => weapons.next());
-  tap('btn-talk', () => quests.interact());
+  tap('btn-talk', () => {
+    if (!interiors.interact()) quests.interact();
+  });
 }
 
 // Pause menu buttons (Esc / MENU shows it once the game has started).
@@ -485,9 +501,12 @@ function updateHudStats() {
   weaponAmmo.textContent = ammoNow === Infinity ? '∞' : String(ammoNow);
   zoneLabel.textContent = 'Gregorovce, Prešov';
   const questMessage = quests.state.messageTimer > 0 ? quests.state.message : '';
+  const interiorMessage = interiors.state.messageTimer > 0 ? interiors.state.message : '';
   const questObjective = quests.state.objective;
   const missionObjective = missions.state.objective;
-  if (questMessage) {
+  if (interiorMessage) {
+    missionLabel.textContent = interiorMessage;
+  } else if (questMessage) {
     missionLabel.textContent = questMessage;
   } else if (questObjective) {
     const time =
@@ -517,7 +536,12 @@ function tick() {
   syncAimHud();
   missions.update(dt);
   quests.update(dt);
-  btnTalk.classList.toggle('hidden', !quests.state.nearGiver || dialogue.state.open);
+  interiors.update(dt);
+  btnTalk.classList.toggle(
+    'hidden',
+    !(quests.state.nearGiver || interiors.state.nearDoor || interiors.state.inside) ||
+      dialogue.state.open,
+  );
 
   if (player.dead !== wasDead) {
     wasDead = player.dead;

@@ -35,7 +35,7 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | `T` | rádio zap/vyp |
 | `B` | úplatok (zníž wanted level) |
 | `R` | pád zhora na cestu pred kostol |
-| `F` | rozhovor s postavou / prijmi quest (voľby aj `1`–`9`) |
+| `F` | rozhovor / prijmi quest (voľby aj `1`–`9`), vstup do budovy a výstup z nej |
 | `F5` / `F9` | ulož / načítaj hru |
 | `Esc` | pauza (menu, questy) |
 
@@ -51,12 +51,14 @@ strieľajú a zatknú ťa s pokutou a BUSTED overlayom, zátarasy od 4 hviezd, h
 chladnú v úkryte, lakovacia garáž pri obchode zmaže wanted, motorky a bicykle
 v doprave, carjacking), misijné markery a obchody, **questy a dialógy** (12 questov,
 10 pomenovaných postáv, quest log v pauze, waypoint na radare, rešpekt, reťaze,
-3 uličné misie, 10 fliaš), save/load, PS2 bloom.
+3 uličné misie, 10 fliaš), **interiéry** (kostol, krčma, obchod a úrad — vstup
+cez `F` pri budove, vlastná miestnosť s NPC a interakciou, výstup späť von),
+save/load, PS2 bloom.
 
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
 tlačidlá `KAM` (kamera), `E` (auto), `🔫` (úder / streľba), `🎯` (mierenie),
-`ZB` (zbraň), `💬` (rozhovor), `↑` / `↓` / `FLY` / `R` vpravo dole, `MENU`
+`ZB` (zbraň), `💬` (rozhovor / vstup do budovy), `↑` / `↓` / `FLY` / `R` vpravo dole, `MENU`
 vľavo hore sa vráti do menu.
 
 ## Ako to funguje
@@ -112,15 +114,17 @@ Klient (`src/`) potom:
 23. `dialogue.js` — dialógové okno s číslovanými voľbami (klik/tap/`1`–`9`).
 24. `quests.js` — 12 questov, 10 quest giverov s menovkou a bublinou, quest log,
     radar waypoint, rešpekt, 3 uličné misie, 10 fliaš.
-25. `vehicles.js` — vstup do auta/motorky/bicykla (carjack — vodič vyskočí a utečie)
+25. `interiors.js` — interiéry: kostol, krčma, obchod a úrad (vlastná miestnosť
+    s NPC a interakciou, menovka „F vstup“ pri budove, výstup späť pred budovu).
+26. `vehicles.js` — vstup do auta/motorky/bicykla (carjack — vodič vyskočí a utečie)
     a jazda s fyzikou podľa typu.
-26. `wanted.js` — wanted level: hliadky s blikajúcou sirénou, peší policajti (streľba,
+27. `wanted.js` — wanted level: hliadky s blikajúcou sirénou, peší policajti (streľba,
     zatknutie s pokutou a BUSTED overlayom), zátarasy od 4 hviezd, chladenie hviezd
     v úkryte a lakovacia garáž pri obchode.
-27. `missions.js` — misijné markery, obchody, save/load.
-28. `postfx.js` — jemný PS2 bloom (EffectComposer).
-29. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
-30. `main.js` — poskladá scénu, HUD a herný loop.
+28. `missions.js` — misijné markery, obchody, save/load.
+29. `postfx.js` — jemný PS2 bloom (EffectComposer).
+30. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
+31. `main.js` — poskladá scénu, HUD a herný loop.
 
 Všetko je zlúčené do niekoľkých meshov, takže scéna zvládne aj slabší stroj.
 
