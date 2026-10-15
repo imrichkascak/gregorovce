@@ -622,6 +622,136 @@ async function desktop() {
   check('F11 weapon pickup hands over the gun', f11.gunGiven, `given=${f11.gunGiven}`);
   check('F11 drive-by fire works and the driver bails', f11.driveBy && f11.driverBailed && f11.driverFlees && f11.carPanics, `driveBy=${f11.driveBy} bail=${f11.driverBailed}`);
 
+  // F12 — pešia polícia, úkryt, lakovacia garáž, typy vozidiel, carjack, výbuch, dopravná AI, siréna
+  const f12 = await page.evaluate(async () => {
+    const { player, wanted, geo, world } = window.__gregorovce;
+    const traffic = world.traffic;
+    const result = {};
+    const field = world.quests.spots.ihrisko;
+    const ground = (x, z) => geo.heightAt(x, z);
+
+    player.vehicle = null;
+    player.dead = false;
+
+    // 12.1 Pešia polícia: hliadky sa priblížia a vystúpia policajti.
+    wanted.clear();
+    player.health = 100;
+    player.position.set(field.x, ground(field.x, field.z), field.z);
+    wanted.crime(3);
+    for (let i = 0; i < 34; i += 1) wanted.update(0.1);
+    result.footCops = wanted.units.filter((u) => u.kind === 'cop').length;
+    result.copHurt = player.health < 100;
+    result.health = player.health;
+
+    // 12.1 Zatknutie: policajt pri tebe = pokuta + BUSTED.
+    const money0 = player.money;
+    const cop = wanted.units.find((u) => u.kind === 'cop');
+    if (cop) {
+      const ox = player.position.x + 1;
+      cop.object.position.set(ox, ground(ox, player.position.z), player.position.z);
+      wanted.update(0.1);
+    }
+    result.arrested = wanted.state.busted && wanted.state.fine > 0 && player.money < money0;
+    result.fine = wanted.state.fine;
+
+    // 12.1 Zátarasy od štyroch hviezd.
+    wanted.clear();
+    player.health = 100;
+    wanted.crime(4);
+    wanted.spawnRoadblock();
+    result.roadblock = wanted.units.some((u) => u.kind === 'roadblock');
+
+    // 12.2 Skrytie: keď ťa polícia nevidí, hviezdy chladnú.
+    wanted.clear();
+    wanted.crime(2);
+    wanted.update(0.1);
+    const far = { x: player.position.x + 600, z: player.position.z + 600 };
+    for (let i = 0; i < 310; i += 1) {
+      player.position.x = far.x;
+      player.position.z = far.z;
+      wanted.update(0.1);
+    }
+    result.hiddenDrop = wanted.state.level === 1;
+    result.levelAfterHide = wanted.state.level;
+
+    // 12.2 Lakovacia garáž zmaže wanted.
+    wanted.clear();
+    wanted.crime(3);
+    player.position.set(wanted.garage.x, ground(wanted.garage.x, wanted.garage.z), wanted.garage.z);
+    wanted.update(0.1);
+    result.respray = wanted.state.level === 0 && wanted.state.resprays > 0;
+    result.resprays = wanted.state.resprays;
+
+    // 12.3 Typy vozidiel: motorka a bicykel.
+    result.moto = traffic.cars.some((c) => c.type === 'moto');
+    result.bike = traffic.cars.some((c) => c.type === 'bike');
+
+    // 12.3 Carjacking: vodič vystúpi a utečie.
+    const target = traffic.cars.find((c) => c.state === 'drive');
+    const peds0 = traffic.peds.length;
+    const jacked = traffic.carjack(target, target.object.position.x - 3, target.object.position.z);
+    result.carjack = jacked === true && target.state === 'stolen';
+    result.driverOut =
+      traffic.peds.length > peds0 && traffic.peds[traffic.peds.length - 1].state === 'flee';
+
+    // 12.3 Auto pri 0 HP vybuchne.
+    const victim = traffic.cars.find((c) => c.state === 'drive');
+    traffic.hitCar(victim, 500);
+    result.exploded = victim.exploded === true && victim.state === 'wrecked';
+
+    // 12.4 Dopravná AI: auto pred hráčom spomalí a zatrúbi.
+    const blocker = traffic.cars.find((c) => c.state === 'drive' && c.type === 'car');
+    const bx = blocker.object.position.x - Math.sin(blocker.object.rotation.y) * 5;
+    const bz = blocker.object.position.z - Math.cos(blocker.object.rotation.y) * 5;
+    player.position.set(bx, ground(bx, bz), bz);
+    blocker.hornTimer = 0;
+    blocker.honked = false;
+    traffic.update(0.2, player);
+    result.brake = blocker.brakeTimer > 0 && blocker.blocked === true;
+    result.horn = blocker.honked === true;
+
+    // 12.4 Chodec uskočí pred autom (auto sa v update vráti na svoju cestu,
+    // takže k autu postavíme chodca).
+    const walker = traffic.peds.find((p) => p.state === 'walk' && !p.temporary);
+    const near = traffic.cars.find((c) => c.state === 'drive' && c !== blocker);
+    const wx = near.object.position.x + 2;
+    walker.object.position.set(wx, ground(wx, near.object.position.z), near.object.position.z);
+    walker.dodging = 0;
+    traffic.update(0.1, null);
+    result.dodge = walker.dodging > 0 && walker.dodgeShift !== 0;
+
+    // 12.4 Siréna: blikajúce svetlá menia intenzitu.
+    wanted.clear();
+    wanted.crime(1);
+    wanted.update(0.1);
+    const cruiser = wanted.units.find((u) => u.kind === 'car');
+    const lightA = cruiser.lights[0].material.emissiveIntensity;
+    wanted.update(0.3);
+    const lightB = cruiser.lights[0].material.emissiveIntensity;
+    wanted.update(0.6);
+    const lightC = cruiser.lights[0].material.emissiveIntensity;
+    result.siren = cruiser.siren === true && (lightA !== lightB || lightB !== lightC);
+    result.flash = [lightA, lightB, lightC];
+
+    // Upratovanie.
+    wanted.clear();
+    player.health = 100;
+    player.dead = false;
+    player.position.set(field.x, ground(field.x, field.z), field.z);
+    return result;
+  });
+  check('F12 foot police deploy and shoot the player', f12.footCops >= 2 && f12.copHurt, `cops=${f12.footCops} health=${f12.health}`);
+  check('F12 arrest fines the player and shows BUSTED', f12.arrested, `fine=${f12.fine}`);
+  check('F12 roadblocks spawn at four stars', f12.roadblock, `roadblock=${f12.roadblock}`);
+  check('F12 hiding out of sight cools the wanted level', f12.hiddenDrop, `level=${f12.levelAfterHide}`);
+  check('F12 spray garage wipes the wanted level', f12.respray, `resprays=${f12.resprays}`);
+  check('F12 traffic has motorbikes and bicycles', f12.moto && f12.bike, `moto=${f12.moto} bike=${f12.bike}`);
+  check('F12 carjacking makes the driver bail and flee', f12.carjack && f12.driverOut, `jack=${f12.carjack} driver=${f12.driverOut}`);
+  check('F12 a wrecked car explodes', f12.exploded, `exploded=${f12.exploded}`);
+  check('F12 traffic brakes and honks for the player', f12.brake && f12.horn, `brake=${f12.brake} horn=${f12.horn}`);
+  check('F12 pedestrians dodge cars', f12.dodge, `dodge=${f12.dodge}`);
+  check('F12 police siren flashes', f12.siren, `flash=${f12.flash}`);
+
   check('no console errors', errors.length === 0, errors.join(' | '));
   await browser.close();
 }

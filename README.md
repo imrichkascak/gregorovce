@@ -46,10 +46,12 @@ samopal, AK-47, ostreľovačka, granát, molotov) s mierením, crosshairom a kam
 cez rameno, **efekty streľby** (tracery, nábojnice, diery po guľkách, výbuchy),
 **pickupy** zbraní/munície/zdravia/armoru s respawnom, **drive-by** z auta
 (zasiahnutý vodič vyskočí a utečie), zdravie a armor hráča, WASTED smrť
-s respawnom v nemocnici, wanted level s políciou, misijné markery a obchody,
-**questy a dialógy** (12 questov, 10 pomenovaných postáv, quest log v pauze,
-waypoint na radare, rešpekt, reťaze, 3 uličné misie, 10 fliaš), save/load,
-PS2 bloom.
+s respawnom v nemocnici, **polícia** (hliadky s blikajúcou sirénou, peší policajti
+strieľajú a zatknú ťa s pokutou a BUSTED overlayom, zátarasy od 4 hviezd, hviezdy
+chladnú v úkryte, lakovacia garáž pri obchode zmaže wanted, motorky a bicykle
+v doprave, carjacking), misijné markery a obchody, **questy a dialógy** (12 questov,
+10 pomenovaných postáv, quest log v pauze, waypoint na radare, rešpekt, reťaze,
+3 uličné misie, 10 fliaš), save/load, PS2 bloom.
 
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
@@ -83,8 +85,10 @@ Klient (`src/`) potom:
 5. `buildings.js` — postaví domy (steny + sedlová strecha), kostol s vežou, ihlou
    a krížom (veža smeruje k ceste), a tabule pre obchod/krčmu. Dom č. 101 sa
    do statického mesh-u nedáva — ten rozbíja `gags.js`.
-6. `traffic.js` — nízko-polygónové autá a chodci, ktorí sa pohybujú po cestách,
-   reagujú na útoky (stagger, knockdown, vstanú), chuligáni sa bijú a autá zrážajú hráča.
+6. `traffic.js` — nízko-polygónové autá, motorky a bicykle, ktoré sa pohybujú po
+   cestách (spomaľujú a trúbia pred hráčom, chodci uskakujú), chodci reagujú na
+   útoky (stagger, knockdown, vstanú), chuligáni sa bijú, autá zrážajú hráča a
+   pri 0 HP vybuchnú.
 7. `gags.js` — dedinské scény v slučke: výbuch domu 101, Paly pridržiava Banana
    pred kostolom kým ho prejde auto, žumpa z bytovky 217 cez cestu do jarku.
 8. `labels.js` — plávajúce menovky (kostol, obchod, krčma, obecný úrad…).
@@ -97,7 +101,7 @@ Klient (`src/`) potom:
 14. `radar.js` — otáčavý radar s blipmi POI, severkou a zónou.
 15. `daynight.js` — cyklus dňa/noci, slnko a pouličné svetlá.
 16. `weather.js` — počasie (jasno/zamračené/dážď).
-17. `audio.js` — procedurálny WebAudio: ambient, 3 rádiá, kroky/motor/výstrel.
+17. `audio.js` — procedurálny WebAudio: ambient, 3 rádiá, kroky/motor/výstrel/trúbenie.
 18. `combat.js` — čistá logika boja (armor pohltenie, melee kužeľ, combo okno) + unit testy.
 19. `weapons.js` — 10 zbraní (melee, strelné, granát/molotov), mierenie, spread,
     projektily a výbuchy, drive-by.
@@ -108,8 +112,11 @@ Klient (`src/`) potom:
 23. `dialogue.js` — dialógové okno s číslovanými voľbami (klik/tap/`1`–`9`).
 24. `quests.js` — 12 questov, 10 quest giverov s menovkou a bublinou, quest log,
     radar waypoint, rešpekt, 3 uličné misie, 10 fliaš.
-25. `vehicles.js` — vstup do auta a jazda.
-26. `wanted.js` — wanted level a policajná naháňačka.
+25. `vehicles.js` — vstup do auta/motorky/bicykla (carjack — vodič vyskočí a utečie)
+    a jazda s fyzikou podľa typu.
+26. `wanted.js` — wanted level: hliadky s blikajúcou sirénou, peší policajti (streľba,
+    zatknutie s pokutou a BUSTED overlayom), zátarasy od 4 hviezd, chladenie hviezd
+    v úkryte a lakovacia garáž pri obchode.
 27. `missions.js` — misijné markery, obchody, save/load.
 28. `postfx.js` — jemný PS2 bloom (EffectComposer).
 29. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.

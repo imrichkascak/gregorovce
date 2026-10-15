@@ -271,21 +271,43 @@ priblížila zážitok k SA.
 
 ### Fáza 12 — Polícia a vozidlá hlbšie
 
-- [ ] 12.1 Pešia polícia: pri wanted ≥ 2 policajti vystúpia z áut, naháňajú a
+- [x] 12.1 Pešia polícia: pri wanted ≥ 2 policajti vystúpia z áut, naháňajú a
       strieľajú → `player.health` klesá; pri ≥ 4 roadblocky na cestách; zatknutie
       → pokuta + existujúci BUSTED flow. **Kritérium:** `wanted.units` obsahuje
       peších; streľba policajtov uberá `player.health`; roadblock existuje.
-- [ ] 12.2 Stratenie polície: keď ťa polícia nevidí (napr. ~30 s mimo dohľad),
+      **Dôkaz:** `PASS F12 foot police deploy and shoot the player — cops=6
+      health=25`; `PASS F12 arrest fines the player and shows BUSTED —
+      fine=360`; `PASS F12 roadblocks spawn at four stars — roadblock=true`;
+      BUSTED overlay (`#busted`, pokuta v HUD), `state.busted`/`state.fine`/
+      `state.copShots`; peší policajti sa vystrelia z hliadky (2 na auto, max 6),
+      strieľajú po 1,3 s z 24 m (8 + level × 1,5 dmg) a zatknú do 2,2 m.
+- [x] 12.2 Stratenie polície: keď ťa polícia nevidí (napr. ~30 s mimo dohľad),
       wanted klesá; spray/lakovacia garáž (nový objekt, napr. pri obchode) zníži
       level na 0; úplatok (B) existuje. **Kritérium:** skrytie zníži level;
       spray garáž vynuluje wanted; flow overený programovo.
-- [ ] 12.3 Vozidlá: motorka a bicykel (nové typy s inou fyzikou), carjacking —
+      **Dôkaz:** `PASS F12 hiding out of sight cools the wanted level —
+      level=1` (po 30 s bez dohľadu do 38 m klesne level o 1);
+      `PASS F12 spray garage wipes the wanted level — resprays=1` (garáž pri
+      obchode + zlatý marker, vjazd = wanted 0); úplatok `B` existuje
+      (`wanted.bribe()`).
+- [x] 12.3 Vozidlá: motorka a bicykel (nové typy s inou fyzikou), carjacking —
       pri krádeži auta vodič vystúpi a panikuje/utečie; auto pri 0 HP vybuchne
       (dym existuje). **Kritérium:** `traffic.cars` má typy; carjack flow mení
       stav vodiča; výbuch auta overený.
-- [ ] 12.4 Dopravná AI: autá spomaľujú/trúbia/obchádzajú hráča aj seba, chodci
+      **Dôkaz:** `PASS F12 traffic has motorbikes and bicycles —
+      moto=true bike=true` (24 vozidiel: car/moto/bike, každý typ s vlastnou
+      rýchlosťou a fyzikou jazdy); `PASS F12 carjacking makes the driver bail
+      and flee — jack=true driver=true` (`traffic.carjack()` → vodič vyskočí ako
+      `flee` chodec); `PASS F12 a wrecked car explodes — exploded=true`
+      (`hitCar` pri 0 HP → `wrecked` + `exploded` + oheň/dym/boom v main.js).
+- [x] 12.4 Dopravná AI: autá spomaľujú/trúbia/obchádzajú hráča aj seba, chodci
       uskakujú pred autami; policajné auto má sirénu a blikajúce svetlá.
       **Kritérium:** reakcie áut/chodcov overené; siréna + blikanie stav.
+      **Dôkaz:** `PASS F12 traffic brakes and honks for the player —
+      brake=true horn=true` (`laneBlocked` → `brakeTimer`, trúbenie `horn`
+      zvuk); `PASS F12 pedestrians dodge cars — dodge=true` (`updateDodge` →
+      `dodging` + `dodgeShift`); `PASS F12 police siren flashes —
+      flash=1.6,1.6,0.2` (striedavé modré/červené svetlá na hliadke).
 
 ### Fáza 13 — Interiéry, štatistiky, cheaty, rádio
 
@@ -394,22 +416,24 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | 2026-10-15 | F9.1–9.5 Bitky a živé NPC | `npm test` 14/14; `npm run verify` 42/42 (12 nových F9 checkov); screenshoty `/tmp/opencode/combat-fight.png`, `/tmp/opencode/combat-wasted.png`; commit `[GTA-SA-2] F9 …` | ✅ |
 | 2026-10-15 | F10.1–10.5 Questy, dialógy, interaktivita | `npm test` 20/20 (6 nových testov `quests-core.test.js`); `npm run verify` 57/57 (15 nových F10 checkov); 12 questov, 10 giverov, 9 miest, 3 uličné misie, 10 fliaš; screenshoty `/tmp/opencode/quest-giver.png`, `quest-dialogue.png`, `quest-log.png`; commit `[GTA-SA-2] F10 …` | ✅ |
 | 2026-10-15 | F11.1–11.5 Streľba, zbrane, pickupy | `npm test` 20/20; `npm run verify` 66/66 (9 nových F11 checkov); 10 zbraní (melee 3, strelné 5, projektily 2), mierenie s kamerou cez rameno, 8 pickupov s respawnom, tracery/nábojnice/diery po guľkách, výbuchy, drive-by s vyskakujúcim vodičom; screenshoty `/tmp/opencode/f11-aim.png`, `f11-boom.png`, `f11-pickup.png`; commit `[GTA-SA-2] F11 …` | ✅ |
+| 2026-10-15 | F12.1–12.4 Polícia a vozidlá hlbšie | `npm test` 20/20; `npm run verify` 77/77 (11 nových F12 checkov); peší policajti (2 na hliadku, max 6) strieľajú a zatknú s pokutou + BUSTED overlay, roadblocky od 4 hviezd, úkryt 30 s bez dohľadu zhodí hviezdu, lakovacia garáž pri obchode vynuluje wanted, motorky/bicykle medzi 24 vozidlami, carjacking s vyskakujúcim vodičom, výbuch auta (oheň/dym/boom), dopravná AI (spomalenie + trúbenie, chodci uskakujú), blikajúca siréna; screenshoty `/tmp/opencode/f12-police.png`, `f12-roadblock.png`, `f12-garage.png`; commit `[GTA-SA-2] F12 …` | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 
 | B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | B9 | B10 | B11 | B12 | B13 | B14 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 0 | 0 | 0 | 1 | 0 | 1 | 1 |
+| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 1 | 0 | 1 | 1 |
 
-Poznámky k skóre (po F11): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
+Poznámky k skóre (po F12): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
 bránia + telá; WASTED + respawn + armor + nemocnica). B2 = 1 → bránia sa, telá a
 dialógy máme, chýbajú **skupinky** NPC (F14). B4 = 2 (9 miest s questom alebo
 interaktivitou: kostol, krčma, obchod, úrad, hasiči, škola, ihrisko, žumpa, dom
 101; fail + retry). B5 = 2 (bubliny + UI s voľbami + 10 giverov s menovkou).
 B6 = 2 (quest log, waypoint, fail/retry, odmeny, 2 reťaze). B7 = 2 (10 zbraní,
 mierenie s crosshairom a kamerou cez rameno, zásahy NPC/áut, pickupy, drive-by,
-tracery/nábojnice/diery, výbuchy, zvuk podľa zbrane). B8/B9 = 0 → pešia polícia
-a carjacking F12. B10 = 0 → interiéry F13.1. B11 = 1 (peniaze + health/armor +
-rešpekt) → skilly a stránka v pauze F13.2. B12 = 0 → cheaty F13.3. B13 = 1
-(3 stanice + sfx podľa zbrane) → DJ/reklámy F13.4. B14 = 1 → zvieratá/skupinky/
-AI reakcie/FPS check F14.
+tracery/nábojnice/diery, výbuchy, zvuk podľa zbrane). B8 = 2 (pešia polícia +
+streľba + roadblocky + pokuty + lakovacia garáž + hľadanie/úkryt + úplatok).
+B9 = 2 (carjacking s vodičom, motorky, bicykle, poškodenie aj výbuch áut).
+B10 = 0 → interiéry F13.1. B11 = 1 (peniaze + health/armor + rešpekt) → skilly a
+stránka v pauze F13.2. B12 = 0 → cheaty F13.3. B13 = 1 (3 stanice + sfx podľa
+zbrane) → DJ/reklámy F13.4. B14 = 1 → zvieratá/skupinky/AI reakcie/FPS check F14.

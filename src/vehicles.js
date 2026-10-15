@@ -1,6 +1,13 @@
-// Drivable cars: press E next to a traffic car to take it over, drive with a
-// GTA-style arcade model, and get out to leave it.
+// Drivable cars, motorbikes and bicycles: press E next to a vehicle to take it
+// over (the driver bails out and runs), drive with a GTA-style arcade model, and
+// get out to leave it. Each type has its own pace and handling.
 import * as THREE from 'three';
+
+const SPECS = {
+  car: { accel: 14, top: 26, reverse: -8, steer: 1.9, grip: 1.1 },
+  moto: { accel: 20, top: 34, reverse: -6, steer: 2.4, grip: 1.6 },
+  bike: { accel: 7, top: 12, reverse: -3, steer: 2.7, grip: 3.2 },
+};
 
 export function createVehicles({ geo, player, traffic, audio }) {
   const state = { driving: false, speed: 0, heading: 0 };
@@ -11,7 +18,7 @@ export function createVehicles({ geo, player, traffic, audio }) {
     let best = null;
     let bestDistanceSq = maxDistance * maxDistance;
     for (const candidate of traffic.cars) {
-      if (candidate.state === 'stolen') continue;
+      if (candidate.state === 'stolen' || candidate.state === 'wrecked') continue;
       const dx = candidate.object.position.x - player.position.x;
       const dz = candidate.object.position.z - player.position.z;
       const distanceSq = dx * dx + dz * dz;
@@ -27,7 +34,9 @@ export function createVehicles({ geo, player, traffic, audio }) {
     if (player.vehicle || player.dead) return false;
     const target = nearestCar(9);
     if (!target) return false;
-    target.state = 'stolen';
+    // Carjack: the driver jumps out and legs it down the road.
+    if (traffic.carjack) traffic.carjack(target, player.position.x, player.position.z);
+    else target.state = 'stolen';
     car = target;
     player.vehicle = target;
     state.driving = true;
@@ -55,6 +64,7 @@ export function createVehicles({ geo, player, traffic, audio }) {
 
   function update(dt) {
     if (!player.vehicle || !car) return;
+    const specs = SPECS[car.type] ?? SPECS.car;
     const keys = player.keys;
     const throttle =
       (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) -
@@ -64,11 +74,11 @@ export function createVehicles({ geo, player, traffic, audio }) {
       (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
     const handbrake = keys.has('Space');
 
-    state.speed += throttle * 14 * dt;
-    state.speed *= 1 - (handbrake ? 4 : 1.1) * dt;
-    state.speed = THREE.MathUtils.clamp(state.speed, -8, 26);
+    state.speed += throttle * specs.accel * dt;
+    state.speed *= 1 - (handbrake ? 4 : specs.grip) * dt;
+    state.speed = THREE.MathUtils.clamp(state.speed, specs.reverse, specs.top);
 
-    state.heading += steer * 1.9 * dt * THREE.MathUtils.clamp(Math.abs(state.speed) / 8, 0, 1) * Math.sign(state.speed || 1);
+    state.heading += steer * specs.steer * dt * THREE.MathUtils.clamp(Math.abs(state.speed) / 8, 0, 1) * Math.sign(state.speed || 1);
 
     forward.set(-Math.sin(state.heading), 0, -Math.cos(state.heading));
     const x = car.object.position.x + forward.x * state.speed * dt;

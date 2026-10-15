@@ -168,6 +168,34 @@
         color: #c01c1c;
         text-shadow: 4px 4px 0 #000, -2px -2px 0 rgba(0, 0, 0, 0.6);
       }
+      #busted {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        gap: 8px;
+        background: radial-gradient(ellipse at center, rgba(10, 20, 60, 0.3), rgba(5, 10, 35, 0.8));
+        z-index: 6;
+        pointer-events: none;
+        text-align: center;
+      }
+      #busted.hidden {
+        display: none;
+      }
+      #busted span {
+        display: block;
+        font-family: "Anton", "Barlow Condensed", sans-serif;
+        font-size: clamp(48px, 10vw, 120px);
+        letter-spacing: 0.06em;
+        color: #3f6eff;
+        text-shadow: 4px 4px 0 #000, -2px -2px 0 rgba(0, 0, 0, 0.6);
+      }
+      #busted small {
+        display: block;
+        font-size: 20px;
+        color: #ffe08a;
+        text-shadow: 2px 2px 0 #000;
+      }
       #dialogue {
         position: fixed;
         left: 50%;
@@ -589,6 +617,10 @@
     <div id="crosshair"></div>
     <div id="hitmarker" class="hidden">✕</div>
     <div id="wasted" class="hidden"><span>WASTED</span></div>
+    <div id="busted" class="hidden">
+      <span>BUSTED</span>
+      <small id="busted-fine"></small>
+    </div>
     <div id="dialogue" class="hidden">
       <div id="dialogue-name"></div>
       <div id="dialogue-text"></div>

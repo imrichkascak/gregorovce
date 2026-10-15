@@ -69,7 +69,6 @@ const dayNight = createDayNight({
 });
 const weather = createWeather({ scene });
 const audio = createAudio();
-const wanted = createWanted({ scene, geo, player, audio });
 const effects = createEffects({ scene });
 const weapons = createWeapons({
   camera,
@@ -116,6 +115,26 @@ world.quests = quests;
 world.collectibles = quests.collectibles;
 const pickups = createPickups({ scene, geo, player, weapons, audio, spots: quests.spots });
 world.pickups = pickups.list;
+// Polícia: hliadky, peší policajti, zátarasy a lakovacia garáž pri obchode.
+const wanted = createWanted({
+  scene,
+  geo,
+  player,
+  audio,
+  effects,
+  traffic: world.traffic,
+  layers,
+  spots: quests.spots,
+});
+// Doprava: trúbenie a výbuch auta rieši main.js (traffic nevie o efektoch).
+world.traffic.hooks.onHorn = () => audio.playSfx('horn');
+world.traffic.hooks.onCarWrecked = (car) => {
+  const p = car.object.position;
+  effects.spawn('fire', p.x, p.y + 0.6, p.z, 1.6);
+  effects.spawn('smoke', p.x, p.y + 1.1, p.z, 1.4);
+  audio.playSfx('boom');
+  if (player.position.distanceTo(p) < 18) cameraRig.shake(0.4);
+};
 const postfx = await createPostFX({ renderer, scene, camera });
 
 window.__gregorovce = {
@@ -201,6 +220,8 @@ const healthFill = document.getElementById('health-fill');
 const armorFill = document.getElementById('armor-fill');
 const hitMarker = document.getElementById('hitmarker');
 const wastedOverlay = document.getElementById('wasted');
+const bustedOverlay = document.getElementById('busted');
+const bustedFine = document.getElementById('busted-fine');
 const btnTalk = document.getElementById('btn-talk');
 const pauseMenu = document.getElementById('pause-menu');
 const pauseContent = document.getElementById('pause-content');
@@ -448,6 +469,7 @@ for (const button of document.querySelectorAll('#pause-menu button')) {
 
 const clock = new THREE.Clock();
 let wasDead = false;
+let wasBusted = false;
 
 function updateHudStats() {
   clockLabel.textContent = formatClock(dayNight.state.time);
@@ -501,6 +523,11 @@ function tick() {
     wasDead = player.dead;
     wastedOverlay.classList.toggle('hidden', !player.dead);
     if (player.dead) audio.playSfx('wasted');
+  }
+  if (wanted.state.busted !== wasBusted) {
+    wasBusted = wanted.state.busted;
+    bustedOverlay.classList.toggle('hidden', !wasBusted);
+    if (wasBusted) bustedFine.textContent = `Pokuta $${wanted.state.fine}`;
   }
 
   avatar.group.position.copy(player.position);

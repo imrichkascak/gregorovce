@@ -140,6 +140,9 @@ export function createAudio() {
     } else if (kind === 'pickup') {
       note(880, 0.08, 'triangle', 0.18);
       setTimeout(() => note(1320, 0.1, 'triangle', 0.18), 90);
+    } else if (kind === 'horn') {
+      note(420, 0.22, 'square', 0.14);
+      setTimeout(() => note(330, 0.24, 'square', 0.14), 220);
     }
   }
 

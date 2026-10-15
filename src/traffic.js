@@ -104,6 +104,71 @@ export function buildCar() {
   return group;
 }
 
+/** A motorbike: narrow body, two wheels, handlebars and a rider. */
+function buildMoto() {
+  const group = new THREE.Group();
+  const bodyColor = new THREE.Color(CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)]);
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.46, 0.42, 2),
+    new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.4, metalness: 0.35 }),
+  );
+  body.position.y = 0.74;
+  body.castShadow = true;
+  group.add(body);
+
+  const wheelGeom = new THREE.CylinderGeometry(0.3, 0.3, 0.14, 10);
+  wheelGeom.rotateZ(Math.PI / 2);
+  const wheelMaterial = new THREE.MeshStandardMaterial({ color: '#15171a', roughness: 0.9 });
+  for (const sz of [-0.78, 0.78]) {
+    const wheel = new THREE.Mesh(wheelGeom, wheelMaterial);
+    wheel.position.set(0, 0.3, sz);
+    group.add(wheel);
+  }
+
+  const bar = new THREE.Mesh(
+    new THREE.BoxGeometry(0.62, 0.06, 0.06),
+    new THREE.MeshStandardMaterial({ color: '#2c2e32', roughness: 0.5 }),
+  );
+  bar.position.set(0, 1.05, -0.62);
+  group.add(bar);
+
+  const rider = buildPedestrian();
+  rider.scale.setScalar(0.9);
+  rider.position.set(0, 0.62, 0.12);
+  group.add(rider);
+  return group;
+}
+
+/** A bicycle: thin frame, two spoked wheels and a rider who pedals slowly. */
+function buildBike() {
+  const group = new THREE.Group();
+  const frameMaterial = new THREE.MeshStandardMaterial({
+    color: CAR_COLORS[2],
+    roughness: 0.5,
+    metalness: 0.3,
+  });
+  const wheelGeom = new THREE.TorusGeometry(0.32, 0.035, 6, 14);
+  const wheelMaterial = new THREE.MeshStandardMaterial({ color: '#15171a', roughness: 0.9 });
+  for (const sz of [-0.62, 0.62]) {
+    const wheel = new THREE.Mesh(wheelGeom, wheelMaterial);
+    wheel.position.set(0, 0.33, sz);
+    group.add(wheel);
+  }
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.2), frameMaterial);
+  frame.position.set(0, 0.62, 0);
+  frame.rotation.x = 0.12;
+  group.add(frame);
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 0.05), frameMaterial);
+  bar.position.set(0, 0.95, -0.55);
+  group.add(bar);
+
+  const rider = buildPedestrian();
+  rider.scale.setScalar(0.85);
+  rider.position.set(0, 0.55, 0.05);
+  group.add(rider);
+  return group;
+}
+
 function buildPedestrian() {
   const group = new THREE.Group();
   const skin = new THREE.MeshStandardMaterial({ color: '#e0ac82', roughness: 1 });
@@ -152,6 +217,8 @@ export function createTraffic(geo, layers) {
   group.name = 'traffic';
   const cars = [];
   const pedestrians = [];
+  // Main.js si pripojí zvuk trúbenia a výbuch auta (traffic nevie o efektoch).
+  const hooks = { onHorn: null, onCarWrecked: null };
 
   const drivable = layers.roads
     .filter((r) => DRIVABLE.has(r.tags.highway))
@@ -160,19 +227,30 @@ export function createTraffic(geo, layers) {
     .sort((a, b) => b.path.length - a.path.length)
     .slice(0, 12);
 
+  // Cars, motorbikes and bicycles share the road, each with its own pace.
+  const TYPE_CYCLE = ['car', 'car', 'moto', 'bike'];
+  const BUILDERS = { car: buildCar, moto: buildMoto, bike: buildBike };
+  const PACE = { car: [6, 5], moto: [9, 6], bike: [2.4, 1.6] };
+  const LATERAL = { car: 1, moto: 0.6, bike: 0.75 };
+
   drivable.forEach((entry, index) => {
     for (let k = 0; k < 2; k += 1) {
-      const car = buildCar();
-      const half = Math.max(0.6, roadWidth(entry.road.tags) / 2 - 1.1);
+      const type = TYPE_CYCLE[(index + k) % TYPE_CYCLE.length];
+      const car = BUILDERS[type]();
+      const half = Math.max(0.6, roadWidth(entry.road.tags) / 2 - 1.1) * LATERAL[type];
+      const [base, spread] = PACE[type];
       cars.push({
         object: car,
+        type,
         path: entry.path,
         distance: ((index + k * 0.5) / (drivable.length * 2)) * entry.path.length,
-        speed: 6 + hash(index * 3 + k) * 5,
+        speed: base + hash(index * 3 + k) * spread,
         lateral: half,
         health: 100,
         state: 'drive',
         hitCooldown: 0,
+        brakeTimer: 0,
+        hornTimer: 0,
       });
       group.add(car);
     }
@@ -203,6 +281,8 @@ export function createTraffic(geo, layers) {
       stateTimer: 0,
       attackTimer: 0,
       swingPhase: 0,
+      dodging: 0,
+      dodgeShift: 0,
     });
     group.add(person);
   }
@@ -219,11 +299,14 @@ export function createTraffic(geo, layers) {
     awayZ /= length;
     const startX = cx - awayX * 1.7;
     const startZ = cz - awayZ * 1.7;
-    const heading = Math.atan2(awayX, awayZ);
-    const path = [
-      { x: startX, z: startZ, heading, length: 0 },
-      { x: startX + awayX * 18, z: startZ + awayZ * 18, heading, length: 18 },
-    ];
+    const path = {
+      pts: [
+        { x: startX, z: startZ },
+        { x: startX + awayX * 18, z: startZ + awayZ * 18 },
+      ],
+      cumulative: [0, 18],
+      length: 18,
+    };
     person.position.set(startX, geo.heightAt(startX, startZ), startZ);
     group.add(person);
     pedestrians.push({
@@ -241,6 +324,8 @@ export function createTraffic(geo, layers) {
       stateTimer: 0,
       attackTimer: 0,
       swingPhase: 0,
+      dodging: 0,
+      dodgeShift: 0,
       temporary: true,
       life: 14,
     });
@@ -248,6 +333,48 @@ export function createTraffic(geo, layers) {
   }
 
   const up = new THREE.Vector3(0, 1, 0);
+
+  /** Je v jazdnom pruhu pred autom prekážka (hráč alebo iné auto)? */
+  function laneBlocked(car, player) {
+    const fx = -Math.sin(car.object.rotation.y);
+    const fz = -Math.cos(car.object.rotation.y);
+    const ahead = (x, z, range) => {
+      const dx = x - car.object.position.x;
+      const dz = z - car.object.position.z;
+      const distance = Math.hypot(dx, dz);
+      return distance > 0.05 && distance < range && (dx * fx + dz * fz) / distance > 0.6;
+    };
+    if (player && !player.dead && !player.vehicle && ahead(player.position.x, player.position.z, 8)) {
+      return true;
+    }
+    for (const other of cars) {
+      if (other === car || other.state === 'stolen' || other.state === 'wrecked') continue;
+      if (ahead(other.object.position.x, other.object.position.z, 5.5)) return true;
+    }
+    return false;
+  }
+
+  /** Chodec uskočí nabok, keď sa k nemu blíži auto. */
+  function updateDodge(person, dt) {
+    let awayX = 0;
+    let awayZ = 0;
+    for (const car of cars) {
+      if (car.state === 'wrecked') continue;
+      const dx = person.object.position.x - car.object.position.x;
+      const dz = person.object.position.z - car.object.position.z;
+      const distance = Math.hypot(dx, dz);
+      if (distance < 4.2) {
+        awayX += dx / (distance || 1);
+        awayZ += dz / (distance || 1);
+      }
+    }
+    if (awayX !== 0 || awayZ !== 0) {
+      person.dodging = 0.9;
+      person.dodgeShift = Math.sign(awayX + awayZ || 1) * 1.7;
+    }
+    if (person.dodging > 0) person.dodging -= dt;
+    else person.dodgeShift = 0;
+  }
 
   /** Knockdown / get-up bookkeeping shared by pedestrians. */
   function updateDowned(person, dt) {
@@ -323,7 +450,7 @@ export function createTraffic(geo, layers) {
     person.distance += person.direction * speed * dt;
     if (person.distance > person.path.length) person.distance -= person.path.length;
     if (person.distance < 0) person.distance += person.path.length;
-    const s = samplePath(geo, person.path, person.distance, person.lateral);
+    const s = samplePath(geo, person.path, person.distance, person.lateral + (person.dodgeShift ?? 0));
     const ground = geo.heightAt(s.x, s.z);
     const step = Math.sin((person.phase += dt * speed * 4));
     person.object.position.set(s.x, ground, s.z);
@@ -341,6 +468,7 @@ export function createTraffic(geo, layers) {
     group,
     cars,
     peds: pedestrians,
+    hooks,
     /**
      * Damage a pedestrian. Small hits make them flinch (and hot-heads fight
      * back), three quick hits or one heavy hit knock them down, zero health
@@ -369,19 +497,32 @@ export function createTraffic(geo, layers) {
     },
     /**
      * Damage a car; wrecked cars stop dead. When `bail` is set (a drive-by or a
-     * bullet through the bodywork) the driver jumps out and runs away.
+     * bullet through the bodywork) the driver jumps out and runs away. A car at
+     * zero HP explodes: the wreck burns and main.js adds fire, smoke and boom.
      */
     hitCar(car, damage, { bail = false, fromX, fromZ } = {}) {
       car.health = Math.max(0, car.health - damage);
       if (car.health <= 0) {
         car.state = 'wrecked';
         car.speed = 0;
+        car.exploded = true;
+        if (hooks.onCarWrecked) hooks.onCarWrecked(car);
         return true;
       }
       if (bail) {
         car.panicTimer = 2.5;
         bailOut(car, fromX, fromZ);
       }
+      return true;
+    },
+    /**
+     * Carjack: the driver bails out and legs it, the car is ready to be driven.
+     * Returns false for wrecks and cars that are already stolen.
+     */
+    carjack(car, fromX, fromZ) {
+      if (!car || car.state === 'stolen' || car.state === 'wrecked') return false;
+      bailOut(car, fromX, fromZ);
+      car.state = 'stolen';
       return true;
     },
     /** Everyone within `radius` of (x, z) runs away; `exclude` is spared. */
@@ -399,20 +540,35 @@ export function createTraffic(geo, layers) {
     update(dt, player = null) {
       for (const car of cars) {
         if (car.hitCooldown > 0) car.hitCooldown -= dt;
+        if (car.hornTimer > 0) car.hornTimer -= dt;
         if (car.state === 'stolen' || car.state === 'wrecked') continue;
         // A shot-up driver slams the brakes for a moment before driving on.
         if (car.panicTimer > 0) {
           car.panicTimer -= dt;
           continue;
         }
-        car.distance += car.speed * dt;
+
+        // Vodiči spomalia a zatrúbia, keď im v pruhu stojí hráč alebo iné auto.
+        car.blocked = laneBlocked(car, player);
+        if (car.blocked) {
+          car.brakeTimer = 0.7;
+          if (car.hornTimer <= 0) {
+            car.hornTimer = 1.6;
+            car.honked = true;
+            if (hooks.onHorn) hooks.onHorn(car);
+          }
+        }
+        const pace = car.brakeTimer > 0 ? 0.25 : 1;
+        if (car.brakeTimer > 0) car.brakeTimer -= dt;
+
+        car.distance += car.speed * pace * dt;
         if (car.distance > car.path.length) car.distance -= car.path.length;
         const s = samplePath(geo, car.path, car.distance, car.lateral);
         car.object.position.set(s.x, geo.heightAt(s.x, s.z) + 0.05, s.z);
         car.object.rotation.y = s.heading;
 
         // Moving traffic hurts a player who stands in the road.
-        if (player && !player.vehicle && !player.dead && car.speed > 6 && car.hitCooldown <= 0) {
+        if (player && !player.vehicle && !player.dead && car.speed * pace > 6 && car.hitCooldown <= 0) {
           const dx = player.position.x - s.x;
           const dz = player.position.z - s.z;
           if (dx * dx + dz * dz < 1.6 * 1.6) {
@@ -442,6 +598,7 @@ export function createTraffic(geo, layers) {
           updateFight(person, dt, player);
           continue;
         }
+        if (person.state === 'walk' || person.state === 'flee') updateDodge(person, dt);
         updateWalking(person, dt);
       }
     },
