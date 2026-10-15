@@ -242,6 +242,145 @@ async function desktop() {
   check('F8 postfx present', f8.hasPostfx, `enabled=${f8.enabled}`);
   check('F8 draw calls within budget (<400)', f8.calls < 400, `calls=${f8.calls}`);
 
+  // F9 — melee swings, NPC reactions, fights, player damage, death, feedback
+  const f9 = await page.evaluate(() => {
+    const { player, weapons, world, effects, cameraRig, avatar, audio, geo, wanted } = window.__gregorovce;
+    const traffic = world.traffic;
+    wanted.clear();
+    player.health = 100;
+    player.armor = 0;
+    player.dead = false;
+
+    // Stand just in front of a calm pedestrian and punch it.
+    const ped = traffic.peds.find((p) => p.state !== 'dead' && p.aggression < 0.5);
+    const px = ped.object.position.x;
+    const pz = ped.object.position.z;
+    player.position.set(px, geo.heightAt(px, pz + 2.1), pz + 2.1);
+    player.yaw = 0; // yaw 0 faces -z, straight at the ped
+    weapons.select(0);
+    // The slow headless render loop may still be mid-swing from F5; clear it.
+    avatar.state.attack = 0;
+    weapons.state.cooldown = 0;
+    // Spy on the sfx calls the fight triggers.
+    const sfx = [];
+    const origSfx = audio.playSfx;
+    audio.playSfx = (kind) => {
+      sfx.push(kind);
+      return origSfx.call(audio, kind);
+    };
+    const health0 = ped.health;
+    const fired = weapons.fire();
+    const pose = avatar.state.pose;
+    const marker = !document.getElementById('hitmarker').classList.contains('hidden');
+    const blood = effects.count('blood');
+    const shake = cameraRig.state.shake;
+    const hurt = ped.health < health0;
+    const reacted = ped.state === 'stagger' || ped.state === 'knockdown' || ped.state === 'fight';
+
+    // Two more quick hits: the third one knocks them down, then they get up.
+    for (let i = 0; i < 2; i += 1) {
+      weapons.update(0.5);
+      weapons.fire();
+    }
+    const knocked = ped.state === 'knockdown';
+    wanted.clear();
+    traffic.update(3.0, player);
+    const gotUp = ped.state;
+    traffic.update(0.8, player);
+    const recovered = ped.state;
+
+    // A lethal hit leaves a body behind in the scene.
+    const corpse = traffic.peds.find((p) => p.state !== 'dead' && p !== ped);
+    traffic.hitPed(corpse, 200, { combo: 1 });
+    const bodyStays = corpse.state === 'dead' && corpse.object.parent !== null;
+    audio.playSfx = origSfx;
+
+    // A chuligán fights back and hurts the player.
+    const brawler = traffic.peds.find((p) => p.aggression > 0.7 && p.state !== 'dead');
+    brawler.health = 100;
+    brawler.state = 'fight';
+    brawler.attackTimer = 0;
+    player.health = 100;
+    player.position.set(brawler.object.position.x, geo.heightAt(brawler.object.position.x, brawler.object.position.z), brawler.object.position.z + 1.2);
+    for (let i = 0; i < 5; i += 1) traffic.update(0.5, player);
+    const fought = player.health < 100;
+
+    // Armor soaks a hit, zero health dies, respawn restores health.
+    player.health = 100;
+    player.armor = 100;
+    player.damage(30);
+    const armorAbsorbed = player.armor < 100 && player.health > 70;
+    player.armor = 0;
+    player.damage(200);
+    const dead = player.dead;
+    const deaths = player.deaths;
+    player.update(3.2);
+    const respawned = !player.dead && player.health === 100;
+
+    return {
+      fired,
+      pose,
+      marker,
+      sounds: [...new Set(sfx)],
+      blood,
+      shake,
+      hurt,
+      reacted,
+      knocked,
+      gotUp,
+      recovered,
+      bodyStays,
+      fought,
+      armorAbsorbed,
+      dead,
+      deaths,
+      respawned,
+    };
+  });
+  check('F9 punch spends a swing and poses', f9.fired && f9.pose === 'punch', `pose=${f9.pose}`);
+  check('F9 hit hurts and reacts', f9.hurt && f9.reacted, `hurt=${f9.hurt} reacted=${f9.reacted}`);
+  check('F9 hit spawns blood and camera shake', f9.blood > 0 && f9.shake > 0, `blood=${f9.blood} shake=${f9.shake.toFixed(2)}`);
+  check('F9 hit marker flashes and fight sounds play', f9.marker && f9.sounds.includes('swing') && f9.sounds.includes('hit'), `marker=${f9.marker} sounds=${f9.sounds.join(',')}`);
+  check('F9 three quick hits knock down', f9.knocked, `state=${f9.knocked ? 'knockdown' : 'no'}`);
+  check('F9 knocked-down ped gets up', f9.gotUp === 'getup' && (f9.recovered === 'flee' || f9.recovered === 'walk'), `${f9.gotUp}→${f9.recovered}`);
+  check('F9 lethal hit leaves a body', f9.bodyStays, `body=${f9.bodyStays}`);
+  check('F9 chuligán fights back and hurts the player', f9.fought, `fought=${f9.fought}`);
+  check('F9 armor soaks a hit', f9.armorAbsorbed, `absorbed=${f9.armorAbsorbed}`);
+  check('F9 zero health dies and respawns', f9.dead && f9.deaths > 0 && f9.respawned, `deaths=${f9.deaths} respawned=${f9.respawned}`);
+
+  // WASTED overlay follows the dead state through the real game loop. The
+  // render loop is slow in headless, so hold the corpse, then release it.
+  await page.evaluate(() => {
+    const { player } = window.__gregorovce;
+    player.health = 100;
+    player.armor = 0;
+    player.damage(500);
+    player.deathTimer = 999;
+  });
+  await page
+    .waitForFunction(() => !document.getElementById('wasted').classList.contains('hidden'), null, { timeout: 15000 })
+    .catch(() => {});
+  const wastedShown = await page.evaluate(() => ({
+    overlay: !document.getElementById('wasted').classList.contains('hidden'),
+    dead: window.__gregorovce.player.dead,
+    bar: document.getElementById('health-fill').style.width,
+  }));
+  await page.evaluate(() => {
+    window.__gregorovce.player.deathTimer = 0;
+  });
+  await page
+    .waitForFunction(
+      () => document.getElementById('wasted').classList.contains('hidden') && !window.__gregorovce.player.dead,
+      null,
+      { timeout: 15000 },
+    )
+    .catch(() => {});
+  const wastedCleared = await page.evaluate(
+    () => document.getElementById('wasted').classList.contains('hidden') && !window.__gregorovce.player.dead,
+  );
+  check('F9 death shows WASTED overlay and empty health bar', wastedShown.overlay && wastedShown.dead && wastedShown.bar === '0%', `shown=${wastedShown.overlay} bar=${wastedShown.bar}`);
+  check('F9 respawn clears WASTED overlay', wastedCleared, `cleared=${wastedCleared}`);
+
   check('no console errors', errors.length === 0, errors.join(' | '));
   await browser.close();
 }

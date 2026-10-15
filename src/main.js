@@ -13,6 +13,7 @@ import { createDayNight } from './daynight.js';
 import { createWeather } from './weather.js';
 import { createAudio } from './audio.js';
 import { createWeapons } from './weapons.js';
+import { createEffects } from './effects.js';
 import { createVehicles } from './vehicles.js';
 import { createWanted } from './wanted.js';
 import { createMissions } from './missions.js';
@@ -66,13 +67,35 @@ const dayNight = createDayNight({
 const weather = createWeather({ scene });
 const audio = createAudio();
 const wanted = createWanted({ scene, geo, player, audio });
+const effects = createEffects({ scene });
 const weapons = createWeapons({
   camera,
   player,
   traffic: world.traffic,
   audio,
+  effects,
   onCrime: (points) => wanted.crime(points),
+  onAttack: (kind) => {
+    avatar.attack(kind);
+    if (kind === 'shoot') cameraRig.shake(0.1);
+  },
+  onHit: (target, info) => {
+    effects.spawn(
+      'blood',
+      target.object.position.x,
+      target.object.position.y + 0.9,
+      target.object.position.z,
+    );
+    flashHitMarker();
+    if (info?.melee) cameraRig.shake(0.22);
+  },
 });
+// Getting hit shakes the camera and grunts; death adds a heavier thud.
+player.onDamage = (info) => {
+  audio.playSfx('hurt');
+  cameraRig.shake(Math.min(0.6, 0.12 + info.amount * 0.012));
+  if (info.fatal) cameraRig.shake(0.5);
+};
 const vehicles = createVehicles({ geo, player, traffic: world.traffic, audio });
 const missions = createMissions({ scene, geo, player, world, layers, avatar, audio });
 player.weapons = weapons;
@@ -95,6 +118,7 @@ window.__gregorovce = {
   weather,
   audio,
   weapons,
+  effects,
   vehicles,
   wanted,
   missions,
@@ -151,8 +175,21 @@ const weaponSlot = document.getElementById('weapon-slot');
 const weaponIcon = document.getElementById('weapon-icon');
 const zoneLabel = document.getElementById('zone');
 const missionLabel = document.getElementById('mission-message');
+const healthFill = document.getElementById('health-fill');
+const armorFill = document.getElementById('armor-fill');
+const hitMarker = document.getElementById('hitmarker');
+const wastedOverlay = document.getElementById('wasted');
 const pauseMenu = document.getElementById('pause-menu');
 const pauseContent = document.getElementById('pause-content');
+
+let hitMarkerTimer = null;
+
+/** Flash the little ✕ at the crosshair when a hit lands. */
+function flashHitMarker() {
+  hitMarker.classList.remove('hidden');
+  clearTimeout(hitMarkerTimer);
+  hitMarkerTimer = setTimeout(() => hitMarker.classList.add('hidden'), 150);
+}
 
 // World data and scene are built — enable PLAY and finish the loading bar.
 startButton.disabled = false;
@@ -341,10 +378,13 @@ for (const button of document.querySelectorAll('#pause-menu button')) {
 }
 
 const clock = new THREE.Clock();
+let wasDead = false;
 
 function updateHudStats() {
   clockLabel.textContent = formatClock(dayNight.state.time);
   staminaFill.style.width = `${player.stamina * 100}%`;
+  healthFill.style.width = `${Math.max(0, player.health)}%`;
+  armorFill.style.width = `${Math.max(0, player.armor)}%`;
   moneyLabel.textContent = formatMoney(player.money);
   starsLabel.textContent = starString(wanted.state.level);
   starsLabel.style.color = wanted.state.level > 0 ? '#f0c53a' : '#9a9a9a';
@@ -361,12 +401,19 @@ function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   player.update(dt);
   vehicles.update(dt);
-  world.update(player.position, dt);
+  world.update(player, dt);
   dayNight.update(dt);
   weather.update(dt, player.position);
   wanted.update(dt);
   weapons.update(dt);
+  effects.update(dt);
   missions.update(dt);
+
+  if (player.dead !== wasDead) {
+    wasDead = player.dead;
+    wastedOverlay.classList.toggle('hidden', !player.dead);
+    if (player.dead) audio.playSfx('wasted');
+  }
 
   avatar.group.position.copy(player.position);
   avatar.face(player.yaw);

@@ -24,7 +24,7 @@ export function createVehicles({ geo, player, traffic, audio }) {
   }
 
   function enter() {
-    if (player.vehicle) return false;
+    if (player.vehicle || player.dead) return false;
     const target = nearestCar(9);
     if (!target) return false;
     target.state = 'stolen';

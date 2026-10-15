@@ -74,11 +74,67 @@ export function createAvatar() {
   const legs = [makeLeg(-1), makeLeg(1)];
   group.add(torso, hips, head, hair, arms[0], arms[1], legs[0], legs[1]);
 
-  const state = { pose: 'idle', phase: 0 };
+  const state = { pose: 'idle', phase: 0, attack: 0, attackKind: 'punch', punchSide: 1 };
   const limbs = { arms, legs, torso, head };
+
+  /**
+   * Start an attack swing: 'punch', 'kick' or 'shoot'. Returns false while a
+   * swing is already running so mashing cannot cancel one.
+   */
+  function attack(kind = 'punch') {
+    if (state.attack > 0) return false;
+    state.attack = kind === 'kick' ? 0.44 : kind === 'shoot' ? 0.28 : 0.36;
+    state.attackDuration = state.attack;
+    state.attackKind = kind;
+    state.pose = kind;
+    state.punchSide = -state.punchSide;
+    return true;
+  }
+
+  /** Attack poses override the walk cycle while a swing is running. */
+  function attackPose(dt) {
+    state.attack = Math.max(0, state.attack - dt);
+    const progress = 1 - state.attack / state.attackDuration;
+    const swing = Math.sin(progress * Math.PI);
+    state.pose = state.attackKind;
+
+    if (state.attackKind === 'punch') {
+      const front = state.punchSide > 0 ? 1 : 0;
+      arms[front].rotation.x = -2.1 * swing;
+      arms[1 - front].rotation.x = -0.5;
+      legs[0].rotation.x = swing * 0.25;
+      legs[1].rotation.x = -swing * 0.3;
+      torso.rotation.x = 0.08 * swing;
+      torso.rotation.y = state.punchSide * 0.45 * swing;
+      return;
+    }
+
+    if (state.attackKind === 'kick') {
+      legs[1].rotation.x = -1.9 * swing;
+      legs[0].rotation.x = swing * 0.3;
+      arms[0].rotation.x = -0.9 * swing;
+      arms[1].rotation.x = -0.5 * swing;
+      torso.rotation.x = -0.12 * swing;
+      torso.rotation.y = 0;
+      return;
+    }
+
+    // 'shoot': both arms level at the target with a little recoil.
+    arms[0].rotation.x = -1.5 + swing * 0.25;
+    arms[1].rotation.x = -1.5 + swing * 0.25;
+    legs[0].rotation.x = 0;
+    legs[1].rotation.x = 0;
+    torso.rotation.x = 0.03;
+    torso.rotation.y = 0;
+  }
 
   /** Pose from the current speed; `phase` drives the walk/run cycle. */
   function update(speed, grounded, dt) {
+    if (state.attack > 0) {
+      attackPose(dt);
+      return;
+    }
+
     const pose = !grounded ? 'jump' : speed > 6 ? 'run' : speed > 0.4 ? 'walk' : 'idle';
     state.pose = pose;
     const cadence = pose === 'run' ? 12 : pose === 'walk' ? 7 : 1.6;
@@ -90,6 +146,7 @@ export function createAvatar() {
       arms[0].rotation.x = -0.7;
       arms[1].rotation.x = -0.7;
       torso.rotation.x = 0.06;
+      torso.rotation.y = 0;
       return;
     }
 
@@ -101,6 +158,7 @@ export function createAvatar() {
     arms[0].rotation.x = -s * armSwing;
     arms[1].rotation.x = s * armSwing;
     torso.rotation.x = pose === 'run' ? 0.1 : pose === 'walk' ? 0.04 : 0;
+    torso.rotation.y = 0;
     torso.position.y = 1.16 + (pose === 'idle' ? Math.sin(state.phase * 2) * 0.015 : 0);
   }
 
@@ -108,7 +166,7 @@ export function createAvatar() {
     group.rotation.y = yaw;
   }
 
-  return { group, state, limbs, update, face, materials };
+  return { group, state, limbs, update, face, attack, materials };
 }
 
 /** Recolours the tank top (used by the clothes shop in missions.js). */

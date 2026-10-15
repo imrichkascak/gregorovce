@@ -964,11 +964,12 @@ export function createWorld(scene, geo, layers) {
     npcSpawn: built.npcSpawn,
     gagAnchors: gags.anchors,
     dropSpawn: gags.anchors.drop ?? null,
-    update(anchor, dt) {
+    update(player, dt) {
+      const anchor = player.position;
       sun.position.copy(anchor).addScaledVector(sunDirection, 1400);
       sun.target.position.copy(anchor);
       sun.target.updateMatrixWorld();
-      traffic.update(dt);
+      traffic.update(dt, player);
       gags.update(dt);
     },
   };

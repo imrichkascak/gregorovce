@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { pointInPolygon } from './geo.js';
 import { MOTION, stepHorizontal } from './motion.js';
+import { applyDamage } from './combat.js';
 
 const PLAYER_RADIUS = 0.5;
 const LOOK_SENSITIVITY = 0.0022;
@@ -46,6 +47,13 @@ export class Player {
     this.wanted = 0;
     this.vehicle = null;
     this.avatar = null;
+    // Damage, death and respawn (WASTED) bookkeeping.
+    this.dead = false;
+    this.deathTimer = 0;
+    this.deaths = 0;
+    this.onDamage = null;
+    // Fall damage arms after the first landing, so the spawn drop is free.
+    this.fallArmed = false;
     // Phones/tablets: no pointer lock — start directly and use touch controls.
     this.touchMode = window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
     this.touchMove = { x: 0, y: 0 };
@@ -111,6 +119,7 @@ export class Player {
     this.position.set(x, this.geo.heightAt(x, z) + MOTION.dropHeight, z);
     this.velocity.set(0, 0, 0);
     this.grounded = false;
+    this.fallArmed = false;
   }
 
   /**
@@ -135,6 +144,47 @@ export class Player {
 
   /** @deprecated name kept for the touch reset button. */
   respawn() {
+    this.dropFromSky();
+  }
+
+  /**
+   * Take a hit: armor soaks most of it, leftover health can kill. A hit also
+   * shoves you back a little and pings the HUD through `onDamage`.
+   */
+  damage(amount, fromX = null, fromZ = null) {
+    if (this.dead || amount <= 0) return false;
+    const next = applyDamage(this.health, this.armor, amount);
+    const dealt = this.health - next.health;
+    this.health = next.health;
+    this.armor = next.armor;
+    if (fromX !== null && fromZ !== null) {
+      const dx = this.position.x - fromX;
+      const dz = this.position.z - fromZ;
+      const length = Math.hypot(dx, dz) || 1;
+      const shove = Math.min(4, amount * 0.1);
+      this.velocity.x += (dx / length) * shove;
+      this.velocity.z += (dz / length) * shove;
+      this.velocity.y = Math.max(this.velocity.y, 2.2);
+    }
+    if (this.health <= 0) {
+      this.dead = true;
+      this.deathTimer = 3;
+      this.deaths += 1;
+      this.keys.clear();
+      this.touchMove.x = 0;
+      this.touchMove.y = 0;
+    }
+    if (this.onDamage) this.onDamage({ amount: dealt, absorbed: next.absorbed, fatal: this.dead });
+    return true;
+  }
+
+  /** Come back after WASTED: hospital care costs a tenth of the cash. */
+  respawnFromDeath() {
+    this.dead = false;
+    this.deathTimer = 0;
+    this.health = 100;
+    this.armor = 0;
+    this.money = Math.max(0, Math.floor(this.money * 0.9));
     this.dropFromSky();
   }
 
@@ -170,6 +220,12 @@ export class Player {
   update(dt) {
     if (!this.started) {
       this.parkAtDrop();
+      return;
+    }
+
+    if (this.dead) {
+      this.deathTimer -= dt;
+      if (this.deathTimer <= 0) this.respawnFromDeath();
       return;
     }
 
@@ -269,6 +325,11 @@ export class Player {
       this.position.y += this.velocity.y * dt;
       const ground = this.geo.heightAt(this.position.x, this.position.z);
       if (this.position.y <= ground) {
+        // Land: hard landings hurt once the spawn drop is over.
+        if (this.fallArmed && this.velocity.y < -14) {
+          this.damage((-this.velocity.y - 14) * 6);
+        }
+        this.fallArmed = true;
         this.position.y = ground;
         this.velocity.y = 0;
         this.grounded = true;

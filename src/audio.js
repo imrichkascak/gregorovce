@@ -120,6 +120,15 @@ export function createAudio() {
       note(90, 0.12, 'square', 0.2);
     } else if (kind === 'engine') noiseBurst({ duration: 0.05, level: 0.06, frequency: 400 });
     else if (kind === 'hit') noiseBurst({ duration: 0.1, level: 0.3, frequency: 1200 });
+    else if (kind === 'swing') noiseBurst({ duration: 0.09, level: 0.12, frequency: 1400 });
+    else if (kind === 'hurt') note(170, 0.16, 'sawtooth', 0.22);
+    else if (kind === 'ko') {
+      noiseBurst({ duration: 0.3, level: 0.45, frequency: 500 });
+      note(65, 0.4, 'square', 0.22);
+    } else if (kind === 'wasted') {
+      note(180, 0.5, 'sawtooth', 0.25);
+      setTimeout(() => note(110, 0.8, 'sawtooth', 0.25), 380);
+    }
   }
 
   return {

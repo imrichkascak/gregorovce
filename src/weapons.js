@@ -1,6 +1,8 @@
-// Weapon inventory and shooting: melee and ranged weapons, raycast hits against
-// pedestrians and cars, muzzle flash and ammo bookkeeping.
+// Weapon inventory and shooting. Melee weapons swing in a cone in front of the
+// player (three quick hits knock the target down); ranged weapons raycast from the
+// camera. Hits react, spend ammo, raise the wanted level and ping the HUD.
 import * as THREE from 'three';
+import { comboHits, inMeleeArc } from './combat.js';
 
 const WEAPONS = [
   { id: 'fist', name: 'Päsť', icon: '✊', melee: true, range: 2.4, damage: 14, ammo: Infinity },
@@ -10,10 +12,12 @@ const WEAPONS = [
 ];
 
 const HIT_RADIUS = 0.9;
+const MELEE_HALF_ANGLE = 0.95;
+const COMBO_WINDOW = 2;
+const COMBO_BONUS = 16;
 
-export function createWeapons({ camera, player, traffic, audio, onCrime }) {
+export function createWeapons({ camera, player, traffic, audio, effects, onCrime, onAttack, onHit }) {
   const state = { current: 0, cooldown: 0 };
-  const ray = new THREE.Raycaster();
   const direction = new THREE.Vector3();
   const origin = new THREE.Vector3();
   const toTarget = new THREE.Vector3();
@@ -41,12 +45,58 @@ export function createWeapons({ camera, player, traffic, audio, onCrime }) {
     return perpendicular <= HIT_RADIUS ? along : Infinity;
   }
 
+  /** Swing a melee weapon: the nearest pedestrian inside the arc gets hit. */
+  function swing(weapon) {
+    if (audio) audio.playSfx('swing');
+    let best = null;
+    let bestDistance = Infinity;
+    for (const ped of traffic.peds) {
+      if (ped.state === 'dead') continue;
+      const distance = Math.hypot(
+        ped.object.position.x - player.position.x,
+        ped.object.position.z - player.position.z,
+      );
+      if (distance >= bestDistance) continue;
+      if (
+        !inMeleeArc(
+          player.position.x,
+          player.position.z,
+          player.yaw,
+          ped.object.position.x,
+          ped.object.position.z,
+          weapon.range,
+          MELEE_HALF_ANGLE,
+        )
+      ) {
+        continue;
+      }
+      bestDistance = distance;
+      best = ped;
+    }
+    if (!best) return true;
+
+    const now = performance.now() / 1000;
+    const combo = comboHits(best.hitTimes ?? [], now, COMBO_WINDOW) + 1;
+    best.hitTimes = [...(best.hitTimes ?? []), now].slice(-8);
+    traffic.panic(best.object.position.x, best.object.position.z, 14, best);
+    traffic.hitPed(best, weapon.damage + (combo >= 3 ? COMBO_BONUS : 0), { combo });
+    if (audio) audio.playSfx('hit');
+    if (onHit) onHit(best, { combo, melee: true });
+    if (onCrime) onCrime(1);
+    return true;
+  }
+
+  /** Fire the current weapon: melee swings, guns raycast from the camera. */
   function fire() {
     if (state.cooldown > 0) return false;
+    if (player.dead) return false;
     const weapon = currentWeapon();
+    if (weapon.melee && player.vehicle) return false;
     if (weapon.ammo !== Infinity && weapon.ammo <= 0) return false;
     if (weapon.ammo !== Infinity) weapon.ammo -= 1;
-    state.cooldown = weapon.melee ? 0.35 : 0.16;
+    state.cooldown = weapon.melee ? 0.4 : 0.16;
+    if (onAttack) onAttack(weapon.melee ? 'punch' : 'shoot');
+    if (weapon.melee) return swing(weapon);
     if (audio) audio.playSfx('gunshot');
 
     aimFrom();
@@ -78,16 +128,27 @@ export function createWeapons({ camera, player, traffic, audio, onCrime }) {
     }
 
     if (bestPed) {
-      traffic.hitPed(bestPed, weapon.damage);
-      traffic.panic(bestPed.object.position.x, bestPed.object.position.z, 18);
+      traffic.panic(bestPed.object.position.x, bestPed.object.position.z, 18, bestPed);
+      traffic.hitPed(bestPed, weapon.damage, { combo: 1 });
       if (audio) audio.playSfx('hit');
-      if (onCrime && !weapon.melee) onCrime(1);
+      if (onHit) onHit(bestPed, { combo: 1, melee: false });
+      if (onCrime) onCrime(1);
       return true;
     }
     if (bestCar) {
       traffic.hitCar(bestCar, weapon.damage);
+      if (effects) {
+        effects.spawn(
+          'smoke',
+          bestCar.object.position.x,
+          bestCar.object.position.y + 0.8,
+          bestCar.object.position.z,
+          0.6,
+        );
+      }
       if (audio) audio.playSfx('hit');
-      if (onCrime && !weapon.melee) onCrime(1);
+      if (onHit) onHit(bestCar, { combo: 1, melee: false });
+      if (onCrime) onCrime(1);
       return true;
     }
     return true;

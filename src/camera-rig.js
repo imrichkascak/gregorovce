@@ -10,6 +10,7 @@ export function createCameraRig(camera, player, colliders) {
     min: 2.6,
     max: 9.5,
     aim: false,
+    shake: 0,
   };
   const target = new THREE.Vector3();
   const direction = new THREE.Vector3();
@@ -37,7 +38,22 @@ export function createCameraRig(camera, player, colliders) {
     return distance * good;
   }
 
-  function update() {
+  /** Kick the camera — hits and shots feel heavier. */
+  function shake(amount = 0.25) {
+    state.shake = Math.min(0.9, state.shake + amount);
+  }
+
+  /** Random jitter while `shake` decays; called after the camera is placed. */
+  function applyShake(dt) {
+    if (state.shake <= 0) return;
+    const amount = state.shake;
+    camera.position.x += (Math.random() - 0.5) * amount;
+    camera.position.y += (Math.random() - 0.5) * amount;
+    camera.position.z += (Math.random() - 0.5) * amount;
+    state.shake = Math.max(0, state.shake - dt * 1.9);
+  }
+
+  function update(dt = 0.016) {
     const { x, y, z } = player.position;
     const head = player.vehicle ? 1.1 : 1.5;
     target.set(x, y + head, z);
@@ -45,6 +61,7 @@ export function createCameraRig(camera, player, colliders) {
     if (state.mode === 'first-person') {
       camera.position.set(x, y + 1.7, z);
       camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
+      applyShake(dt);
       return;
     }
 
@@ -67,6 +84,7 @@ export function createCameraRig(camera, player, colliders) {
 
     camera.position.lerp(desired, 0.35);
     camera.lookAt(target);
+    applyShake(dt);
   }
 
   function toggleMode() {
@@ -77,5 +95,5 @@ export function createCameraRig(camera, player, colliders) {
     state.distance = THREE.MathUtils.clamp(state.distance + delta, state.min, state.max);
   }
 
-  return { state, update, toggleMode, zoom };
+  return { state, update, toggleMode, zoom, shake };
 }

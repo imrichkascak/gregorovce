@@ -140,26 +140,44 @@ priblížila zážitok k SA.
 
 ### Fáza 9 — Bitky a živé NPC
 
-- [ ] 9.1 Melee útoky hráča: animácie úderov avatara (ľavý hák, pravý hák, kop),
+- [x] 9.1 Melee útoky hráča: animácie úderov avatara (ľavý hák, pravý hák, kop),
       hitbox podľa uhla a dosahu, 3-úderové combo, úder funguje aj počas behu.
       **Kritérium:** `avatar` má stav útoku (napr. `avatar.state.pose === 'punch'`);
       NPC v dosahu stratí `health`; 3 rýchle údery → `ped.state === 'knockdown'`.
-- [ ] 9.2 Reakcie NPC na zásah: flinch (odskočenie), knockdown (spadne, chvíľu
+      **Dôkaz:** verify → `PASS F9 punch spends a swing and poses — pose=punch`;
+      `PASS F9 hit hurts and reacts — hurt=true reacted=true`;
+      `PASS F9 three quick hits knock down — state=knockdown`; unit testy
+      `combat.test.js` (inMeleeArc kužeľ, comboHits okno) 14/14.
+- [x] 9.2 Reakcie NPC na zásah: flinch (odskočenie), knockdown (spadne, chvíľu
       leží), vstane (~2–4 s) alebo sa vzdiali; krvavé častice; smrť = telo ostane
       (fade). **Kritérium:** po zásahu `ped.state === 'stagger'` alebo
       `'knockdown'`; po knockdowne sa vráti `walk`; pri 0 health `dead` telo ostane.
-- [ ] 9.3 NPC sa bránia: typ NPC (napr. chuligáni pri krčme), pri útoku sa
+      **Dôkaz:** `PASS F9 hit hurts and reacts — hurt=true reacted=true`;
+      `PASS F9 knocked-down ped gets up — getup→flee`;
+      `PASS F9 lethal hit leaves a body — body=true`;
+      `PASS F9 hit spawns blood and camera shake — blood=24`.
+- [x] 9.3 NPC sa bránia: typ NPC (napr. chuligáni pri krčme), pri útoku sa
       rozbehnú k hráčovi, udierajú; hráč stráca `health`; dá sa vyhrať (NPC
       knockdown) aj prehrať (hráč KO). **Kritérium:** `ped.state === 'fight'`;
       `player.health` klesá pri zásahu od NPC.
-- [ ] 9.4 Hráčove zdravie a smrť: pád z výšky, náraz auta, zásah → `health`
+      **Dôkaz:** `PASS F9 chuligán fights back and hurts the player — fought=true`;
+      agresivita `hash(i * 3.1) > 0.72 ? 0.9 : 0.15` v `traffic.js`.
+- [x] 9.4 Hráčove zdravie a smrť: pád z výšky, náraz auta, zásah → `health`
       klesá; `armor` pohlcuje časť zásahu; pri 0 → WASTED obrazovka → respawn
       (nemocnica) so stratou peňazí; HUD bar pre health/armor.
       **Kritérium:** `player.health` klesne po zásahu; pri 0 → WASTED flow +
       respawn; armor absorbuje ≥ 50 %.
-- [ ] 9.5 Feedback boja: kamera shake pri údere/výstrele, krv, zvuky úderov
+      **Dôkaz:** `PASS F9 armor soaks a hit — absorbed=true` (2/3 pohltenie);
+      `PASS F9 zero health dies and respawns — deaths=1 respawned=true`;
+      `PASS F9 death shows WASTED overlay and empty health bar — shown=true bar=0%`;
+      `PASS F9 respawn clears WASTED overlay — cleared=true`;
+      `respawnFromDeath()` = nemocnica −10 % peňazí (`player.js`).
+- [x] 9.5 Feedback boja: kamera shake pri údere/výstrele, krv, zvuky úderov
       (punch/hurt/KO), hit marker. **Kritérium:** `world.effects.blood > 0` po
       zásahu; `cameraRig.state.shake ≠ 0`; nové zvuky hrajú.
+      **Dôkaz:** `PASS F9 hit spawns blood and camera shake — blood=24 shake=0.22`;
+      `PASS F9 hit marker flashes and fight sounds play — marker=true sounds=swing,hit`;
+      nové sfx `swing`/`hurt`/`ko`/`wasted` v `audio.js`.
 
 ### Fáza 10 — Questy, dialógy a interaktivita na miestach
 
@@ -327,10 +345,19 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 
 | Dátum | Fáza/úloha | Dôkaz | Stav |
 | --- | --- | --- | --- |
-| — | — | — | — |
+| 2026-10-15 | F9.1–9.5 Bitky a živé NPC | `npm test` 14/14; `npm run verify` 42/42 (12 nových F9 checkov); screenshoty `/tmp/opencode/combat-fight.png`, `/tmp/opencode/combat-wasted.png`; commit `[GTA-SA-2] F9 …` | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 
 | B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | B9 | B10 | B11 | B12 | B13 | B14 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| 2 | 1 | 2 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 1 | 1 |
+
+Poznámky k skóre (po F9): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
+bránia + telá; WASTED + respawn + armor + nemocnica). B2 = 1 → dialógy a skupinky
+prinesie F10/F14. B4 = 1 → ≥ 8 miest s questom prinesie F10.3. B5 = 1 (bublina nad
+NPC) → UI s voľbami F10.2. B6 = 1 (počítadlo misií v pauze) → waypoint/fail/retry
+F10. B7 = 1 (4 zbrane, zásahy, krv) → mierenie/pickupy/drive-by F11. B8/B9 = 0 →
+pešia polícia a carjacking F12. B10 = 0 → interiéry F13.1. B11 = 1 (peniaze +
+health/armor v HUD) → rešpekt/skilly/stránka F13.2. B12 = 0 → cheaty F13.3. B13 = 1
+(3 stanice) → DJ/reklamy/sfx F13.4. B14 = 1 → zvieratá/AI reakcie/FPS check F14.

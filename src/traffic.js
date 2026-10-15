@@ -172,6 +172,7 @@ export function createTraffic(geo, layers) {
         lateral: half,
         health: 100,
         state: 'drive',
+        hitCooldown: 0,
       });
       group.add(car);
     }
@@ -195,26 +196,136 @@ export function createTraffic(geo, layers) {
       direction: hash(i * 1.3) > 0.5 ? 1 : -1,
       health: 100,
       state: 'walk',
+      // Roughly a quarter of the village are hot-headed chuligáni who swing
+      // back instead of running away.
+      aggression: hash(i * 3.1) > 0.72 ? 0.9 : 0.15,
+      hitTimes: [],
+      stateTimer: 0,
+      attackTimer: 0,
+      swingPhase: 0,
     });
     group.add(person);
   }
 
   const up = new THREE.Vector3(0, 1, 0);
 
+  /** Knockdown / get-up bookkeeping shared by pedestrians. */
+  function updateDowned(person, dt) {
+    if (person.state === 'knockdown') {
+      person.stateTimer -= dt;
+      person.object.rotation.z = Math.PI / 2;
+      if (person.stateTimer <= 0) {
+        person.state = 'getup';
+        person.stateTimer = 0.6;
+      }
+      return true;
+    }
+    if (person.state === 'getup') {
+      person.stateTimer = Math.max(0, person.stateTimer - dt);
+      person.object.rotation.z = (Math.PI / 2) * (person.stateTimer / 0.6);
+      if (person.stateTimer <= 0) {
+        person.object.rotation.z = 0;
+        person.state = person.aggression > 0.7 ? 'fight' : 'flee';
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /** Flinch after a hit, then run away or swing back. */
+  function updateStagger(person, dt) {
+    person.stateTimer -= dt;
+    person.object.rotation.z = Math.sin(person.stateTimer * 42) * 0.18;
+    if (person.stateTimer <= 0) {
+      person.object.rotation.z = 0;
+      person.state = person.aggression > 0.7 ? 'fight' : 'flee';
+    }
+  }
+
+  /** Chase the player on foot and throw punches when close enough. */
+  function updateFight(person, dt, player) {
+    const dx = player.position.x - person.object.position.x;
+    const dz = player.position.z - person.object.position.z;
+    const distance = Math.hypot(dx, dz) || 1;
+    person.object.rotation.y = Math.atan2(dx, dz);
+
+    if (distance > 1.5) {
+      const speed = 2.8;
+      const x = person.object.position.x + (dx / distance) * speed * dt;
+      const z = person.object.position.z + (dz / distance) * speed * dt;
+      person.object.position.set(x, geo.heightAt(x, z), z);
+      const step = Math.sin((person.phase += dt * speed * 5));
+      const { legs, arms } = person.object.userData.limbs;
+      legs[0].rotation.x = step * 0.6;
+      legs[1].rotation.x = -step * 0.6;
+      arms[0].rotation.x = -step * 0.55;
+      arms[1].rotation.x = step * 0.55;
+      return;
+    }
+
+    // In reach: swing, and land a hit roughly once a second.
+    const swing = Math.sin((person.swingPhase += dt * 9));
+    const { arms, legs } = person.object.userData.limbs;
+    arms[1].rotation.x = -1.7 + swing * 0.7;
+    arms[0].rotation.x = -0.6;
+    legs[0].rotation.x = 0;
+    legs[1].rotation.x = 0;
+    person.attackTimer -= dt;
+    if (person.attackTimer <= 0) {
+      person.attackTimer = 1.1;
+      player.damage(8 + person.aggression * 4, person.object.position.x, person.object.position.z);
+    }
+  }
+
+  /** Walk/flee movement along the path network (the original behaviour). */
+  function updateWalking(person, dt) {
+    const speed = person.state === 'flee' ? person.speed * 2.4 : person.speed;
+    person.distance += person.direction * speed * dt;
+    if (person.distance > person.path.length) person.distance -= person.path.length;
+    if (person.distance < 0) person.distance += person.path.length;
+    const s = samplePath(geo, person.path, person.distance, person.lateral);
+    const ground = geo.heightAt(s.x, s.z);
+    const step = Math.sin((person.phase += dt * speed * 4));
+    person.object.position.set(s.x, ground, s.z);
+    person.object.rotation.y = s.heading + (person.direction < 0 ? Math.PI : 0);
+    person.object.rotation.z = 0;
+    const { legs, arms } = person.object.userData.limbs;
+    legs[0].rotation.x = step * 0.55;
+    legs[1].rotation.x = -step * 0.55;
+    arms[0].rotation.x = -step * 0.5;
+    arms[1].rotation.x = step * 0.5;
+    person.object.position.y = ground + Math.abs(step) * 0.03;
+  }
+
   return {
     group,
     cars,
     peds: pedestrians,
-    /** Damage a pedestrian; dead ones lie down and stop. */
-    hitPed(person, damage) {
+    /**
+     * Damage a pedestrian. Small hits make them flinch (and hot-heads fight
+     * back), three quick hits or one heavy hit knock them down, zero health
+     * leaves a body behind.
+     */
+    hitPed(person, damage, { combo = 1 } = {}) {
+      if (person.state === 'dead') return false;
       person.health = Math.max(0, person.health - damage);
       if (person.health <= 0) {
         person.state = 'dead';
         person.object.rotation.z = Math.PI / 2;
         person.object.position.y += 0.15;
+      } else if (combo >= 3 || damage >= 40) {
+        person.state = 'knockdown';
+        person.stateTimer = 2.4;
+        person.object.rotation.z = Math.PI / 2;
+        person.object.position.y += 0.12;
+      } else if (person.aggression > 0.7) {
+        person.state = 'fight';
+        person.attackTimer = 0.9;
       } else {
-        person.state = 'flee';
+        person.state = 'stagger';
+        person.stateTimer = 0.4;
       }
+      return true;
     },
     /** Damage a car; wrecked cars stop dead. */
     hitCar(car, damage) {
@@ -224,10 +335,10 @@ export function createTraffic(geo, layers) {
         car.speed = 0;
       }
     },
-    /** Everyone within `radius` of (x, z) runs away. */
-    panic(x, z, radius) {
+    /** Everyone within `radius` of (x, z) runs away; `exclude` is spared. */
+    panic(x, z, radius, exclude = null) {
       for (const person of pedestrians) {
-        if (person.state === 'dead') continue;
+        if (person.state === 'dead' || person === exclude) continue;
         const dx = person.object.position.x - x;
         const dz = person.object.position.z - z;
         if (dx * dx + dz * dz < radius * radius) {
@@ -236,32 +347,38 @@ export function createTraffic(geo, layers) {
         }
       }
     },
-    update(dt) {
+    update(dt, player = null) {
       for (const car of cars) {
+        if (car.hitCooldown > 0) car.hitCooldown -= dt;
         if (car.state === 'stolen' || car.state === 'wrecked') continue;
         car.distance += car.speed * dt;
         if (car.distance > car.path.length) car.distance -= car.path.length;
         const s = samplePath(geo, car.path, car.distance, car.lateral);
         car.object.position.set(s.x, geo.heightAt(s.x, s.z) + 0.05, s.z);
         car.object.rotation.y = s.heading;
+
+        // Moving traffic hurts a player who stands in the road.
+        if (player && !player.vehicle && !player.dead && car.speed > 6 && car.hitCooldown <= 0) {
+          const dx = player.position.x - s.x;
+          const dz = player.position.z - s.z;
+          if (dx * dx + dz * dz < 1.6 * 1.6) {
+            car.hitCooldown = 2;
+            player.damage(26, s.x, s.z);
+          }
+        }
       }
       for (const person of pedestrians) {
         if (person.state === 'dead') continue;
-        const speed = person.state === 'flee' ? person.speed * 2.4 : person.speed;
-        person.distance += person.direction * speed * dt;
-        if (person.distance > person.path.length) person.distance -= person.path.length;
-        if (person.distance < 0) person.distance += person.path.length;
-        const s = samplePath(geo, person.path, person.distance, person.lateral);
-        const ground = geo.heightAt(s.x, s.z);
-        const step = Math.sin((person.phase += dt * speed * 4));
-        person.object.position.set(s.x, ground, s.z);
-        person.object.rotation.y = s.heading + (person.direction < 0 ? Math.PI : 0);
-        const { legs, arms } = person.object.userData.limbs;
-        legs[0].rotation.x = step * 0.55;
-        legs[1].rotation.x = -step * 0.55;
-        arms[0].rotation.x = -step * 0.5;
-        arms[1].rotation.x = step * 0.5;
-        person.object.position.y = ground + Math.abs(step) * 0.03;
+        if (updateDowned(person, dt)) continue;
+        if (person.state === 'stagger') {
+          updateStagger(person, dt);
+          continue;
+        }
+        if (person.state === 'fight' && player && !player.dead) {
+          updateFight(person, dt, player);
+          continue;
+        }
+        updateWalking(person, dt);
       }
     },
   };
