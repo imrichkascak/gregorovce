@@ -37,7 +37,7 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | `R` | pád zhora na cestu pred kostol |
 | `F` | rozhovor / prijmi quest (voľby aj `1`–`9`), vstup do budovy a výstup z nej |
 | `F5` / `F9` | ulož / načítaj hru |
-| `Esc` | pauza (menu, questy) |
+| `Esc` | pauza (menu, questy, štatistiky) |
 
 **Systémy:** viditeľná postava v 3. osobe s animáciami, deň/noc a počasie, rádio,
 jazditeľné autá, zbrane a boj (melee kombo, knockdown, krv), bitky s NPC
@@ -53,7 +53,9 @@ v doprave, carjacking), misijné markery a obchody, **questy a dialógy** (12 qu
 10 pomenovaných postáv, quest log v pauze, waypoint na radare, rešpekt, reťaze,
 3 uličné misie, 10 fliaš), **interiéry** (kostol, krčma, obchod a úrad — vstup
 cez `F` pri budove, vlastná miestnosť s NPC a interakciou, výstup späť von),
-save/load, PS2 bloom.
+**štatistiky hráča** (14 počítadiel — čas, km pešo/autom, questy, misie, bitky, KO,
+zločiny, hviezdy, zatknutia, smrti, autá, zárobok/útrata — stránka v pauze so
+živými hodnotami), save/load, PS2 bloom.
 
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
@@ -116,22 +118,25 @@ Klient (`src/`) potom:
     radar waypoint, rešpekt, 3 uličné misie, 10 fliaš.
 25. `interiors.js` — interiéry: kostol, krčma, obchod a úrad (vlastná miestnosť
     s NPC a interakciou, menovka „F vstup“ pri budove, výstup späť pred budovu).
-26. `vehicles.js` — vstup do auta/motorky/bicykla (carjack — vodič vyskočí a utečie)
+26. `stats.js` — štatistiky hráča: 14 počítadiel (čas, km pešo/autom, questy,
+    misie, bitky, KO, zločiny, hviezdy, zatknutia, smrti, autá, zárobok/útrata)
+    + unit testy, uloženie do localStorage.
+27. `vehicles.js` — vstup do auta/motorky/bicykla (carjack — vodič vyskočí a utečie)
     a jazda s fyzikou podľa typu.
-27. `wanted.js` — wanted level: hliadky s blikajúcou sirénou, peší policajti (streľba,
+28. `wanted.js` — wanted level: hliadky s blikajúcou sirénou, peší policajti (streľba,
     zatknutie s pokutou a BUSTED overlayom), zátarasy od 4 hviezd, chladenie hviezd
     v úkryte a lakovacia garáž pri obchode.
-28. `missions.js` — misijné markery, obchody, save/load.
-29. `postfx.js` — jemný PS2 bloom (EffectComposer).
-30. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
-31. `main.js` — poskladá scénu, HUD a herný loop.
+29. `missions.js` — misijné markery, obchody, save/load.
+30. `postfx.js` — jemný PS2 bloom (EffectComposer).
+31. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
+32. `main.js` — poskladá scénu, HUD a herný loop.
 
 Všetko je zlúčené do niekoľkých meshov, takže scéna zvládne aj slabší stroj.
 
 ## Overenie
 
 ```bash
-npm test        # unit testy (motion, rules, combat, quests-core)
+npm test        # unit testy (motion, rules, combat, quests-core, stats)
 npm run verify  # server + Playwright assertions pre všetky fázy (GTA-SA-PLAN.md, GTA-SA-PLAN-2.md)
 ```
 

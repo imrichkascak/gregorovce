@@ -327,10 +327,28 @@ priblížila zážitok k SA.
       budove menovka „F vstup“ (sprite), vstup cez `F`/💬 a výstup pri
       dverách; interakcie: sviečka (+25 zdravie), pivo (+10 zdravie, −5 $),
       vesta (+50 armor, −100 $), potvrdenie (+5 rešpekt), cooldown 12 s.
-- [ ] 13.2 Štatistiky hráča: stránka „Štatistiky“ v pause menu — rešpekt, skilly,
+- [x] 13.2 Štatistiky hráča: stránka „Štatistiky“ v pause menu — rešpekt, skilly,
       najazdené/odchodené km, questy, zločiny, peniaze, hviezdy, čas hry;
       rešpekt rastie za questy/bitky; štatistiky sa ukladajú.
       **Kritérium:** `player.stats` má ≥ 6 hodnôt; stránka zobrazí živé hodnoty.
+      **Dôkaz:** `PASS F13 player stats track >= 6 values — keys=14`;
+      `PASS F13 walking grows the distance stat — walked=2.0`;
+      `PASS F13 money changes are counted — earned=true`;
+      `PASS F13 crimes and top wanted level are counted — crimes=true`;
+      `PASS F13 deaths are counted — deaths=true`; `PASS F13 knockouts give
+      respect once per target — respect=true`; `PASS F13 stats page shows live
+      rows — rows=16`; `PASS F13 stats save and load — saved=true`.
+      `src/stats.js` (čisté funkcie + tracker): 14 počítadiel (čas hry,
+      odchodené, najazdené, questy, misie, bitky, KO, zločiny, max hviezdy,
+      zatknutia, smrti, ukradnuté autá, zarobil, minul); rešpekt +1 za KO
+      (ten istý cieľ len raz, `WeakSet`); vzdialenosť podľa rýchlosti
+      (`player.currentSpeed` / `vehicleSpeed()`), peniaze cez rozdiel
+      (`addMoney` → zarobil/minul), uloženie `gregorovce.stats`; stránka
+      „Štatistiky“ v pauze sa obnovuje každých 0,5 s (živé hodnoty);
+      screenshot `/tmp/opencode/f13-stats.png` (16 riadkov: čas 1 h 02 min,
+      1,5 km pešo, 32,4 km autom, 6 questov, 3 misie, 41 úderov/7 KO,
+      zločiny 6 max 3★, zatknutia 1, smrti 2, autá 4, zarobil 5820 €,
+      minul 2180 €, rešpekt 58, peniaze 1350 €, hviezdy 2/6, zdravie 82).
 - [ ] 13.3 Cheaty: ≥ 6 kódov (zdravie+armor, zbrane+munícia, spawn auta,
       počasie, čas, wanted dole, …) zapísaných na klávesnici, HUD potvrdenie
       „CHEAT“, a oprav starý over-claim F4.3 (plán 1 tvrdí cheat na auto).
@@ -430,12 +448,13 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | 2026-10-15 | F11.1–11.5 Streľba, zbrane, pickupy | `npm test` 20/20; `npm run verify` 66/66 (9 nových F11 checkov); 10 zbraní (melee 3, strelné 5, projektily 2), mierenie s kamerou cez rameno, 8 pickupov s respawnom, tracery/nábojnice/diery po guľkách, výbuchy, drive-by s vyskakujúcim vodičom; screenshoty `/tmp/opencode/f11-aim.png`, `f11-boom.png`, `f11-pickup.png`; commit `[GTA-SA-2] F11 …` | ✅ |
 | 2026-10-15 | F12.1–12.4 Polícia a vozidlá hlbšie | `npm test` 20/20; `npm run verify` 77/77 (11 nových F12 checkov); peší policajti (2 na hliadku, max 6) strieľajú a zatknú s pokutou + BUSTED overlay, roadblocky od 4 hviezd, úkryt 30 s bez dohľadu zhodí hviezdu, lakovacia garáž pri obchode vynuluje wanted, motorky/bicykle medzi 24 vozidlami, carjacking s vyskakujúcim vodičom, výbuch auta (oheň/dym/boom), dopravná AI (spomalenie + trúbenie, chodci uskakujú), blikajúca siréna; screenshoty `/tmp/opencode/f12-police.png`, `f12-roadblock.png`, `f12-garage.png`; commit `[GTA-SA-2] F12 …` | ✅ |
 | 2026-10-15 | F13.1 Interiéry (kostol, krčma, obchod, úrad) | `npm test` 20/20; `npm run verify` 82/82 (5 nových F13 checkov); 4 miestnosti s obsahom + NPC + interakciou, menovky „F vstup“ pri budovách, vstup/výstup overený (`inside=true`, `doorDistance=0.0`); `src/interiors.js` | ✅ |
+| 2026-10-15 | F13.2 Štatistiky hráča | `npm test` 26/26 (6 nových testov `stats.test.js`); `npm run verify` 90/90 (8 nových F13 checkov); 14 počítadiel, rešpekt +1 za KO, živé riadky stránky „Štatistiky“ v pauze, uloženie `gregorovce.stats`; screenshot `/tmp/opencode/f13-stats.png` (16 riadkov) | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 
 | B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | B9 | B10 | B11 | B12 | B13 | B14 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 1 | 0 | 1 | 1 |
+| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 1 | 1 |
 
 Poznámky k skóre (po F12): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
 bránia + telá; WASTED + respawn + armor + nemocnica). B2 = 1 → bránia sa, telá a
@@ -449,6 +468,8 @@ streľba + roadblocky + pokuty + lakovacia garáž + hľadanie/úkryt + úplatok
 B9 = 2 (carjacking s vodičom, motorky, bicykle, poškodenie aj výbuch áut).
 B10 = 2 (4 interiéry — kostol, krčma, obchod, úrad — s vlastnou
 miestnosťou, NPC, interakciou a výstupom späť pred budovu; F13.1).
-B11 = 1 (peniaze + health/armor + rešpekt) → skilly a
-stránka v pauze F13.2. B12 = 0 → cheaty F13.3. B13 = 1 (3 stanice + sfx podľa
+B11 = 2 (peniaze + health/armor + rešpekt + 14 počítadiel štatistík —
+čas, km pešo/autom, questy, misie, bitky, KO, zločiny, hviezdy, zatknutia,
+smrti, autá, zárobok/útrata — a stránka „Štatistiky“ v pauze so živými
+hodnotami, uložená v localStorage; F13.2). B12 = 0 → cheaty F13.3. B13 = 1 (3 stanice + sfx podľa
 zbrane) → DJ/reklámy F13.4. B14 = 1 → zvieratá/skupinky/AI reakcie/FPS check F14.

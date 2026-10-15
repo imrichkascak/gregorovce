@@ -794,6 +794,75 @@ async function desktop() {
   check('F13 exiting returns the player to the door', f13.exited, `doorDistance=${Number(f13.doorDistance).toFixed(1)}`);
   check('F13 standing at a door offers entry', f13.nearDoor, `nearDoor=${f13.nearDoor}`);
 
+  // F13.2 — štatistiky hráča: počítadlá, živé hodnoty, uloženie
+  const f132 = await page.evaluate(async () => {
+    const { player, wanted, stats } = window.__gregorovce;
+    const result = {};
+    result.keys = Object.values(stats.stats).filter((value) => typeof value === 'number').length;
+
+    // Chôdza: rýchlosť × čas → pribudne vzdialenosť.
+    const walkedBefore = stats.stats.walked;
+    player.currentSpeed = 4;
+    stats.update(0.5);
+    player.currentSpeed = 0;
+    result.walkedGrew = stats.stats.walked > walkedBefore;
+    result.walked = stats.stats.walked;
+
+    // Peniaze: odmena sa zapíše ako zárobok.
+    const earnedBefore = stats.stats.moneyEarned;
+    player.money += 100;
+    stats.update(0.1);
+    result.earnedGrew = stats.stats.moneyEarned >= earnedBefore + 100;
+
+    // Zločin: rast wanted levelu.
+    const crimesBefore = stats.stats.crimes;
+    wanted.crime(2);
+    stats.update(0.1);
+    result.crimeCounted = stats.stats.crimes > crimesBefore && stats.stats.maxStars >= 2;
+    wanted.clear();
+
+    // Smrť hráča.
+    const deathsBefore = stats.stats.deaths;
+    player.dead = true;
+    stats.update(0.1);
+    player.dead = false;
+    result.deathCounted = stats.stats.deaths > deathsBefore;
+
+    // Rešpekt rastie za bitky: KO dá +1, ten istý cieľ len raz.
+    const respectBefore = player.respect;
+    const kosBefore = stats.stats.kos;
+    const target = { object: {} };
+    const firstKo = stats.noteKO(target);
+    const secondKo = stats.noteKO(target);
+    result.respectGrew =
+      firstKo && !secondKo && player.respect === respectBefore + 1 && stats.stats.kos === kosBefore + 1;
+
+    // Stránka v pauze: riadky so živými hodnotami.
+    const rows = stats.rows();
+    result.rowCount = rows.length;
+    result.rowsOk = rows.every(
+      (row) => typeof row.label === 'string' && typeof row.value === 'string' && row.label && row.value,
+    );
+    result.liveMoney = rows.some(
+      (row) => row.label === 'Peniaze' && row.value.includes(String(Math.floor(player.money))),
+    );
+
+    // Uloženie a načítanie štatistík.
+    stats.stats.walked = 1234;
+    stats.save();
+    stats.stats.walked = 0;
+    result.saved = stats.load() && stats.stats.walked === 1234;
+    return result;
+  });
+  check('F13 player stats track >= 6 values', f132.keys >= 6, `keys=${f132.keys}`);
+  check('F13 walking grows the distance stat', f132.walkedGrew, `walked=${Number(f132.walked).toFixed(1)}`);
+  check('F13 money changes are counted', f132.earnedGrew, `earned=${f132.earnedGrew}`);
+  check('F13 crimes and top wanted level are counted', f132.crimeCounted, `crimes=${f132.crimeCounted}`);
+  check('F13 deaths are counted', f132.deathCounted, `deaths=${f132.deathCounted}`);
+  check('F13 knockouts give respect once per target', f132.respectGrew, `respect=${f132.respectGrew}`);
+  check('F13 stats page shows live rows', f132.rowCount >= 6 && f132.rowsOk && f132.liveMoney, `rows=${f132.rowCount}`);
+  check('F13 stats save and load', f132.saved, `saved=${f132.saved}`);
+
   check('no console errors', errors.length === 0, errors.join(' | '));
   await browser.close();
 }

@@ -19,6 +19,7 @@ import { createWanted } from './wanted.js';
 import { createMissions } from './missions.js';
 import { createQuests } from './quests.js';
 import { createInteriors } from './interiors.js';
+import { createStatsTracker } from './stats.js';
 import { createPickups } from './pickups.js';
 import { createDialogue } from './dialogue.js';
 import { createPostFX } from './postfx.js';
@@ -94,6 +95,8 @@ const weapons = createWeapons({
     );
     flashHitMarker();
     if (info?.melee) cameraRig.shake(0.22);
+    statsTracker.noteFight();
+    if (target.state === 'dead' || target.state === 'knockdown') statsTracker.noteKO(target);
   },
 });
 // Getting hit shakes the camera and grunts; death adds a heavier thud.
@@ -137,6 +140,14 @@ const wanted = createWanted({
   layers,
   spots: quests.spots,
 });
+// Štatistiky hráča: čas, vzdialenosti, peniaze, zločiny, questy, bitky.
+const statsTracker = createStatsTracker({
+  player,
+  wanted,
+  quests,
+  missions,
+  vehicleSpeed: () => vehicles.state.speed,
+});
 // Doprava: trúbenie a výbuch auta rieši main.js (traffic nevie o efektoch).
 world.traffic.hooks.onHorn = () => audio.playSfx('horn');
 world.traffic.hooks.onCarWrecked = (car) => {
@@ -172,6 +183,7 @@ window.__gregorovce = {
   quests,
   dialogue,
   interiors,
+  stats: statsTracker,
   postfx,
   syncAimHud,
 };
@@ -238,6 +250,9 @@ const btnTalk = document.getElementById('btn-talk');
 const pauseMenu = document.getElementById('pause-menu');
 const pauseContent = document.getElementById('pause-content');
 
+let pausePage = null;
+let statsRefresh = 0;
+
 let hitMarkerTimer = null;
 
 /** Show the crosshair while aiming or right after a shot. */
@@ -284,10 +299,12 @@ document.addEventListener('keydown', (event) => {
   if (event.code === 'F5') {
     missions.save();
     quests.save();
+    statsTracker.save();
   }
   if (event.code === 'F9') {
     missions.load();
     quests.load();
+    statsTracker.load();
   }
   if (/^Digit[1-9]$/.test(event.code)) weapons.select(Number(event.code.slice(5)) - 1);
   if (event.code === 'Digit0') weapons.select(9);
@@ -309,6 +326,7 @@ window.addEventListener(
 window.addEventListener('beforeunload', () => {
   missions.save();
   quests.save();
+  statsTracker.save();
 });
 
 // Touch controls (phones/tablets): floating joystick on the left, look drag on
@@ -445,21 +463,28 @@ if (player.touchMode) {
   });
 }
 
+/** Stránka „Štatistiky“ v pauze — živé hodnoty zo hry. */
+function statsPageHtml() {
+  return (
+    '<b>Štatistiky</b><br>' +
+    statsTracker
+      .rows()
+      .map((row) => `${row.label}: ${row.value}`)
+      .join('<br>')
+  );
+}
+
 // Pause menu buttons (Esc / MENU shows it once the game has started).
 for (const button of document.querySelectorAll('#pause-menu button')) {
   button.addEventListener('click', () => {
     const action = button.dataset.action;
+    pausePage = action;
     if (action === 'resume') player.lock();
     else if (action === 'map') {
       pauseContent.innerHTML =
         '<b>Mapa — Gregorovce, Prešov</b><br>Kostol · Obchod · Krčma · Žumpa 217<br>Misie: žlté žiary, obchody: zelené.';
     } else if (action === 'stats') {
-      pauseContent.innerHTML =
-        `<b>Štatistiky</b><br>Penize: ${Math.floor(player.money)} €<br>` +
-        `Hviezdy: ${wanted.state.level}/6<br>Misie: ${missions.state.completed.length}<br>` +
-        `Questy: ${quests.log().filter((row) => row.status === 'completed').length}/${quests.defs.length}<br>` +
-        `Rešpekt: ${player.respect}<br>` +
-        `Zdravie: ${Math.round(player.health)} · Auto: ${player.vehicle ? 'áno' : 'nie'}`;
+      pauseContent.innerHTML = statsPageHtml();
     } else if (action === 'quests') {
       const labels = {
         available: 'k dispozícii',
@@ -537,6 +562,15 @@ function tick() {
   missions.update(dt);
   quests.update(dt);
   interiors.update(dt);
+  statsTracker.update(dt);
+  // Stránka „Štatistiky“ v pauze sa obnovuje, aby ukazovala živé hodnoty.
+  if (pausePage === 'stats' && !pauseMenu.classList.contains('hidden')) {
+    statsRefresh -= dt;
+    if (statsRefresh <= 0) {
+      statsRefresh = 0.5;
+      pauseContent.innerHTML = statsPageHtml();
+    }
+  }
   btnTalk.classList.toggle(
     'hidden',
     !(quests.state.nearGiver || interiors.state.nearDoor || interiors.state.inside) ||
