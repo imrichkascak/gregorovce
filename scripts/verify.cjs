@@ -157,6 +157,56 @@ async function desktop() {
   });
   check('F4 enter car + drive + exit', f4.ok, JSON.stringify(f4));
 
+  // F4 fix — riadenie: doprava musí na obrazovke točiť doprava a auto musí
+  // jazdiť v smere, ktorým sa kamera pozerá (predok so svetlami napred).
+  const f4steer = await page.evaluate(() => {
+    const { player, vehicles, world, geo } = window.__gregorovce;
+    const target = world.traffic.cars.find((c) => c.state === 'drive');
+    if (!target) return { ok: false, why: 'no traffic car' };
+    player.position.set(
+      target.object.position.x,
+      geo.heightAt(target.object.position.x, target.object.position.z),
+      target.object.position.z + 0.5,
+    );
+    if (!vehicles.enter()) return { ok: false, why: 'cannot enter' };
+    vehicles.state.speed = 12;
+    vehicles.update(0.05);
+    const camYaw = player.yaw;
+    const view = { x: -Math.sin(camYaw), z: -Math.cos(camYaw) };
+    const right = { x: Math.cos(camYaw), z: -Math.sin(camYaw) };
+    const before = { x: target.object.position.x, z: target.object.position.z };
+    player.keys.add('KeyD');
+    vehicles.update(0.2);
+    player.keys.delete('KeyD');
+    const move = { x: target.object.position.x - before.x, z: target.object.position.z - before.z };
+    const len = Math.hypot(move.x, move.z) || 1;
+    const along = (move.x * view.x + move.z * view.z) / len;
+    const sideways = (move.x * right.x + move.z * right.z) / len;
+    const nose = { x: Math.sin(target.object.rotation.y), z: Math.cos(target.object.rotation.y) };
+    const noseDot = (move.x * nose.x + move.z * nose.z) / len;
+    vehicles.exit();
+    return { ok: true, moved: len, along, sideways, noseDot };
+  });
+  check(
+    'F4 car drives where the camera looks',
+    f4steer.ok && f4steer.along > 0.9,
+    `along=${f4steer.along?.toFixed(3)} moved=${f4steer.moved?.toFixed(2)}m`,
+  );
+  check(
+    'F4 pressing right steers right on screen',
+    f4steer.ok && f4steer.sideways > 0.02,
+    `sideways=${f4steer.sideways?.toFixed(3)}`,
+  );
+  check(
+    'F4 the car leads with its nose (headlights first)',
+    f4steer.ok && f4steer.noseDot > 0.9,
+    `nose=${f4steer.noseDot?.toFixed(3)}`,
+  );
+  check('F4 no music plays on its own', await page.evaluate(() => {
+    const { audio } = window.__gregorovce;
+    return audio.isRadioOn() === false && audio.isAmbienceOn() === false;
+  }), 'radio + ambience off by default');
+
   // F5 — weapons select + fire + ped reaction
   const f5 = await page.evaluate(() => {
     const { weapons, player, camera, world } = window.__gregorovce;

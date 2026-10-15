@@ -50,11 +50,10 @@ export function createVehicles({ geo, player, traffic, audio }) {
     if (!player.vehicle) return false;
     const parked = car.object.position;
     player.vehicle = null;
-    player.position.set(
-      parked.x + Math.cos(state.heading) * 2,
-      geo.heightAt(parked.x + Math.cos(state.heading) * 2, parked.z - Math.sin(state.heading) * 2),
-      parked.z - Math.sin(state.heading) * 2,
-    );
+    // Vystúp vpravo od auta (pravá strana = (-cos, sin) pri smere jazdy).
+    const outX = parked.x - Math.cos(state.heading) * 2;
+    const outZ = parked.z + Math.sin(state.heading) * 2;
+    player.position.set(outX, geo.heightAt(outX, outZ), outZ);
     car.state = 'drive';
     car = null;
     state.driving = false;
@@ -78,16 +77,20 @@ export function createVehicles({ geo, player, traffic, audio }) {
     state.speed *= 1 - (handbrake ? 4 : specs.grip) * dt;
     state.speed = THREE.MathUtils.clamp(state.speed, specs.reverse, specs.top);
 
-    state.heading += steer * specs.steer * dt * THREE.MathUtils.clamp(Math.abs(state.speed) / 8, 0, 1) * Math.sign(state.speed || 1);
+    // Doprava (steer > 0) musí na obrazovke točiť doprava: kamera sa pozerá
+    // v smere jazdy, takže uhol klesá. Pri spiatočke sa smer obráti.
+    state.heading -= steer * specs.steer * dt * THREE.MathUtils.clamp(Math.abs(state.speed) / 8, 0, 1) * Math.sign(state.speed || 1);
 
-    forward.set(-Math.sin(state.heading), 0, -Math.cos(state.heading));
+    // Predok auta (svetlá) je +z, teda v smere jazdy — auto jazdí dopredu.
+    forward.set(Math.sin(state.heading), 0, Math.cos(state.heading));
     const x = car.object.position.x + forward.x * state.speed * dt;
     const z = car.object.position.z + forward.z * state.speed * dt;
     car.object.position.set(x, geo.heightAt(x, z) + 0.05, z);
     car.object.rotation.y = state.heading;
 
     player.position.copy(car.object.position);
-    player.yaw = state.heading;
+    // Kamera sa pozerá v smere jazdy (yaw kamery je opačný k smeru pohľadu).
+    player.yaw = state.heading + Math.PI;
     if (audio && Math.abs(state.speed) > 1) audio.playSfx('engine');
   }
 

@@ -24,7 +24,7 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 
 | Klávesa | Akcia |
 | --- | --- |
-| `W` `A` `S` `D` | chôdza / jazda autom (pohľadom kamery, s rozbehom a zastavením) |
+| `W` `A` `S` `D` | chôdza / jazda autom v smere kamery (vpravo = vpravo, svetlá napred) |
 | myš | rozhľad (3. osoba), `ľavé` = úder / streľba, `pravé` = mierenie (crosshair, kamera cez rameno) |
 | `Shift` | beh, kým vydrží stamina |
 | `Space` | skok (v aute brzda) |
@@ -32,7 +32,8 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | `E` | vstúp / vystúp z najbližšieho auta |
 | `1`–`0` | prepni zbraň (päsť, nôž, bejzbal, pištoľ, brokovnica, samopal, AK-47, ostreľovačka, granát, molotov) |
 | `V` | prepni počasie (jasno / zamračené / dážď) |
-| `T` | rádio zap/vyp |
+| `T` | rádio zap/vyp (predvolene ticho) |
+| `M` | dedinský tón zap/vyp (predvolene ticho) |
 | `B` | úplatok (zníž wanted level) |
 | `R` | pád zhora na cestu pred kostol |
 | `F` | rozhovor / prijmi quest (voľby aj `1`–`9`), vstup do budovy a výstup z nej |
@@ -63,7 +64,7 @@ potvrdením „CHEAT: …“ a dotykovou stránkou „Cheaty“ v pauze), save/l
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
 tlačidlá `KAM` (kamera), `E` (auto), `🔫` (úder / streľba), `🎯` (mierenie),
-`ZB` (zbraň), `💬` (rozhovor / vstup do budovy), `↑` / `↓` / `FLY` / `R` vpravo dole, `MENU`
+`ZB` (zbraň), `💬` (rozhovor / vstup do budovy), `↑` / `↓` / `FLY` / `🔊` (dedinský tón) / `R` vpravo dole, `MENU`
 vľavo hore sa vráti do menu.
 
 ## Ako to funguje
@@ -108,7 +109,8 @@ Klient (`src/`) potom:
 14. `radar.js` — otáčavý radar s blipmi POI, severkou a zónou.
 15. `daynight.js` — cyklus dňa/noci, slnko a pouličné svetlá.
 16. `weather.js` — počasie (jasno/zamračené/dážď).
-17. `audio.js` — procedurálny WebAudio: ambient, 3 rádiá, kroky/motor/výstrel/trúbenie.
+17. `audio.js` — procedurálny WebAudio: dedinský tón (predvolene vypnutý, `M`),
+    3 rádiá, kroky/motor/výstrel/trúbenie — hra začína v tichu.
 18. `combat.js` — čistá logika boja (armor pohltenie, melee kužeľ, combo okno) + unit testy.
 19. `weapons.js` — 10 zbraní (melee, strelné, granát/molotov), mierenie, spread,
     projektily a výbuchy, drive-by.
@@ -138,6 +140,13 @@ Klient (`src/`) potom:
 33. `main.js` — poskladá scénu, HUD a herný loop.
 
 Všetko je zlúčené do niekoľkých meshov, takže scéna zvládne aj slabší stroj.
+
+## Ďalší vývoj
+
+`ENGINE-PLAN.md` — návrh (zatiaľ len plán, nič z neho nie je implementované), čo ďalej
+s enginom a architektúrou: modernizácia na mieste (Vite + TypeScript + Rapier + fixný
+timestep), porovnanie s Babylon.js / PlayCanvas / Godot 4 web exportom, odporúčanie
+a go/no-go kritériá pre prípadný Godot spike.
 
 ## Overenie
 

@@ -13,7 +13,9 @@ export function createAudio() {
   let radioTimer = null;
   let radioStep = 0;
   let current = 0;
-  const state = { radioOn: false };
+  let ambience = null;
+  // Hra začína v tichu: rádio aj dedinský tón sa zapínajú až na pokyn hráča.
+  const state = { radioOn: false, ambienceOn: false };
 
   function resume() {
     if (!ctx) {
@@ -23,12 +25,13 @@ export function createAudio() {
       master = ctx.createGain();
       master.gain.value = 0.5;
       master.connect(ctx.destination);
-      startAmbience();
     }
     if (ctx.state === 'suspended') ctx.resume();
   }
 
+  /** Dedinský tón (nízky huk) — zapnutý len keď si ho hráč zapne. */
   function startAmbience() {
+    if (!ctx || ambience) return;
     const osc = ctx.createOscillator();
     osc.type = 'sawtooth';
     osc.frequency.value = 52;
@@ -39,6 +42,25 @@ export function createAudio() {
     gain.gain.value = 0.015;
     osc.connect(filter).connect(gain).connect(master);
     osc.start();
+    ambience = osc;
+    state.ambienceOn = true;
+  }
+
+  function stopAmbience() {
+    if (!ambience) return;
+    try {
+      ambience.stop();
+    } catch {
+      /* už zastavený */
+    }
+    ambience.disconnect();
+    ambience = null;
+    state.ambienceOn = false;
+  }
+
+  function toggleAmbience() {
+    if (state.ambienceOn) stopAmbience();
+    else startAmbience();
   }
 
   function note(frequency, duration, type = 'triangle', level = 0.25, target = null) {
@@ -157,6 +179,10 @@ export function createAudio() {
     setStation,
     currentStation: () => current,
     isRadioOn: () => state.radioOn,
+    startAmbience,
+    stopAmbience,
+    toggleAmbience,
+    isAmbienceOn: () => state.ambienceOn,
     playSfx,
   };
 }

@@ -308,6 +308,7 @@ document.addEventListener('keydown', (event) => {
   }
   if (event.code === 'KeyV') weather.cycle();
   if (event.code === 'KeyT') audio.toggleRadio();
+  if (event.code === 'KeyM') audio.toggleAmbience();
   if (event.code === 'KeyB') wanted.bribe();
   if (event.code === 'F5') {
     missions.save();
@@ -462,6 +463,7 @@ if (player.touchMode) {
     });
   };
   tap('btn-fly', () => player.setFlying(!player.flying));
+  tap('btn-ambience', () => audio.toggleAmbience());
   tap('btn-menu', () => player.pause());
   tap('btn-r', () => player.respawn());
   tap('btn-camera', () => cameraRig.toggleMode());

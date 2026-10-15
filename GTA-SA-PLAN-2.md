@@ -372,6 +372,22 @@ priblížila zážitok k SA.
       skladbami a reklamy (procedurálne), sfx podľa zbrane (brokovnica/AK/
       ostreľovačka znejú inak), motor podľa typu. **Kritérium:**
       `audio.stations.length ≥ 5`; DJ/reklama stav; rozdielne sfx.
+- [x] 13.5 Opravy podľa spätnej väzby: (1) riadenie auta bolo zrkadlovo
+      obrátené (doprava točilo doľava) a auto jazdilo dozadu (svetlá
+      vzadu); (2) hudba znela hneď po štarte; (3) loading screen bol
+      s pruhmi; (4) chýbal favicon; (5) plán ďalšieho vývoja enginu.
+      **Kritérium:** verify checky na smer jazdy, ticho po štarte, plný
+      overlay a favicon; `ENGINE-PLAN.md` existuje.
+      **Dôkaz:** `PASS F4 car drives where the camera looks — along=0.929
+      moved=1.77m`; `PASS F4 pressing right steers right on screen —
+      sideways=0.371` (pred opravou bolo znamienko opačné);
+      `PASS F4 the car leads with its nose (headlights first) —
+      nose=1.000`; `PASS F4 no music plays on its own — radio + ambience
+      off by default`; `npm test` 31/31; `npm run verify` **99/99**;
+      `#overlay-art` meria presne `1100×780` a `430×900` (celá plocha,
+      žiadne pruhy); `favicon.svg` HTTP 200 (`image/svg+xml`),
+      `favicon.png` 180×180 (48 % pozadie, 19 % kopec, 10,6 % žlté G,
+      1,3 % červená hviezda); `ENGINE-PLAN.md` (plán, nie implementácia).
 
 ### Fáza 14 — Hustota, výkon, mobil, finále
 
@@ -465,6 +481,7 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | 2026-10-15 | F13.1 Interiéry (kostol, krčma, obchod, úrad) | `npm test` 20/20; `npm run verify` 82/82 (5 nových F13 checkov); 4 miestnosti s obsahom + NPC + interakciou, menovky „F vstup“ pri budovách, vstup/výstup overený (`inside=true`, `doorDistance=0.0`); `src/interiors.js` | ✅ |
 | 2026-10-15 | F13.2 Štatistiky hráča | `npm test` 26/26 (6 nových testov `stats.test.js`); `npm run verify` 90/90 (8 nových F13 checkov); 14 počítadiel, rešpekt +1 za KO, živé riadky stránky „Štatistiky“ v pauze, uloženie `gregorovce.stats`; screenshot `/tmp/opencode/f13-stats.png` (16 riadkov) | ✅ |
 | 2026-10-15 | F13.3 Cheaty | `npm test` 31/31 (5 nových testov `cheats.test.js`); `npm run verify` 95/95 (5 nových F13 checkov); 8 kódov (ZDRAVIE, ZBRANE, AUTO, POCASIE, HODINY, POLICIA, PENIAZE, LET) s efektom, HUD toast „CHEAT: …“, dotyková stránka „Cheaty“ v pauze, opravený over-claim F4.3 v `GTA-SA-PLAN.md` | ✅ |
+| 2026-10-15 | F13.5 Opravy podľa spätnej väzby (riadenie, ticho, overlay, favicon, plán) | `npm test` 31/31; `npm run verify` **99/99** (4 nové F4 checky); riadenie: `forward=(sin h, cos h)`, `heading -= steer`, `player.yaw = heading + π` (`along=0.929`, `sideways=0.371`, `nose=1.000`); ticho po štarte (`radio + ambience off by default`, `M`/`🔊` toggle); `#overlay-art` = `cover` (1100×780 aj 430×900 = celá plocha); `favicon.svg` + `favicon.png` (PNG 180×180: 48 % pozadie, 19 % kopec, 10,6 % žltá, 1,3 % červená); `ENGINE-PLAN.md` (len plán) | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 

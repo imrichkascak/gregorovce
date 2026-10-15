@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="GTA Gregorovce">
+  <rect width="64" height="64" rx="12" fill="#14121a" />
+  <rect x="3" y="3" width="58" height="58" rx="10" fill="none" stroke="#ffd21e" stroke-width="2.5" opacity="0.75" />
+  <!-- dedinský kopec s kostolíkom -->
+  <path d="M6 50 C 18 40, 26 46, 36 44 C 46 42, 54 34, 58 30 L 58 58 L 6 58 Z" fill="#2f6b33" />
+  <path d="M40 45 l4 -5 l4 5 z" fill="#c8402f" />
+  <rect x="42.6" y="45" width="2.8" height="5" fill="#efe7d8" />
+  <line x1="44" y1="38.5" x2="44" y2="40" stroke="#ffd21e" stroke-width="1.4" />
+  <!-- písmeno G -->
+  <text x="32" y="42" text-anchor="middle" font-family="Anton, Impact, Haettenschweiler, sans-serif" font-size="42" font-weight="700" fill="#ffd21e" stroke="#14121a" stroke-width="1.2">G</text>
+  <!-- hviezda (wanted level) -->
+  <path d="M52 6 l2.2 4.4 4.8 0.7 -3.5 3.4 0.8 4.8 -4.3 -2.3 -4.3 2.3 0.8 -4.8 -3.5 -3.4 4.8 -0.7 z" fill="#ff3b30" stroke="#14121a" stroke-width="1" />
+</svg>
