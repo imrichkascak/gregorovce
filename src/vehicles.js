@@ -91,7 +91,7 @@ export function createVehicles({ geo, player, traffic, audio }) {
     player.position.copy(car.object.position);
     // Kamera sa pozerá v smere jazdy (yaw kamery je opačný k smeru pohľadu).
     player.yaw = state.heading + Math.PI;
-    if (audio && Math.abs(state.speed) > 1) audio.playSfx('engine');
+    if (audio && Math.abs(state.speed) > 1) audio.playSfx(`engine-${car.type ?? 'car'}`);
   }
 
   return {

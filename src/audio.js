@@ -1,19 +1,85 @@
-// Procedural WebAudio: village ambience, three radio stations and gameplay SFX.
-// The context is created lazily on the first user gesture (browser policy).
-const STATIONS = [
-  { name: 'Playback FM', root: 220, scale: [0, 2, 4, 7, 9], tempo: 3.2 },
-  { name: 'K-DST', root: 174, scale: [0, 3, 5, 7, 10], tempo: 2.4 },
-  { name: 'Radio Los Santos', root: 262, scale: [0, 2, 3, 7, 8], tempo: 4.2 },
-];
+// Procedural WebAudio: village ambience, six radio stations with DJ breaks and
+// gameplay SFX. The context is created lazily on the first user gesture (browser
+// policy) and every sound bed starts silent until the player switches it on.
+import { STATIONS, advance, createRadioPlan, nextStation as planNextStation, setStation as planSetStation, stationAt } from './radio-core.js';
+
+// Each kind is a small table of noise bursts and notes, so every weapon and every
+// vehicle type has its own sound and verify can compare the profiles.
+const SFX = {
+  footstep: { noise: [{ duration: 0.08, level: 0.12, frequency: 900 }] },
+  swing: { noise: [{ duration: 0.09, level: 0.12, frequency: 1400 }] },
+  hit: { noise: [{ duration: 0.1, level: 0.3, frequency: 1200 }] },
+  hurt: { notes: [{ f: 170, d: 0.16, type: 'sawtooth', level: 0.22 }] },
+  ko: {
+    noise: [{ duration: 0.3, level: 0.45, frequency: 500 }],
+    notes: [{ f: 65, d: 0.4, type: 'square', level: 0.22 }],
+  },
+  wasted: {
+    notes: [
+      { f: 180, d: 0.5, type: 'sawtooth', level: 0.25 },
+      { f: 110, d: 0.8, type: 'sawtooth', level: 0.25, delay: 0.38 },
+    ],
+  },
+  gunshot: {
+    noise: [{ duration: 0.18, level: 0.5, frequency: 3200 }],
+    notes: [{ f: 90, d: 0.12, type: 'square', level: 0.2 }],
+  },
+  pistol: {
+    noise: [{ duration: 0.15, level: 0.45, frequency: 3000 }],
+    notes: [{ f: 130, d: 0.1, type: 'square', level: 0.22 }],
+  },
+  smg: {
+    noise: [{ duration: 0.09, level: 0.32, frequency: 2600 }],
+    notes: [{ f: 175, d: 0.07, type: 'square', level: 0.16 }],
+  },
+  ak: {
+    noise: [{ duration: 0.26, level: 0.55, frequency: 2200 }],
+    notes: [{ f: 70, d: 0.2, type: 'square', level: 0.24 }],
+  },
+  shotgun: {
+    noise: [{ duration: 0.42, level: 0.55, frequency: 900 }],
+    notes: [{ f: 80, d: 0.3, type: 'square', level: 0.25 }],
+  },
+  sniper: {
+    noise: [{ duration: 0.5, level: 0.5, frequency: 2600 }],
+    notes: [{ f: 120, d: 0.45, type: 'sawtooth', level: 0.2 }],
+  },
+  boom: {
+    noise: [{ duration: 0.85, level: 0.7, frequency: 300 }],
+    notes: [{ f: 48, d: 0.7, type: 'square', level: 0.3 }],
+  },
+  pickup: {
+    notes: [
+      { f: 880, d: 0.08, level: 0.18 },
+      { f: 1320, d: 0.1, level: 0.18, delay: 0.09 },
+    ],
+  },
+  horn: {
+    notes: [
+      { f: 420, d: 0.22, type: 'square', level: 0.14 },
+      { f: 330, d: 0.24, type: 'square', level: 0.14, delay: 0.22 },
+    ],
+  },
+  engine: { noise: [{ duration: 0.05, level: 0.06, frequency: 400 }] },
+  'engine-car': {
+    noise: [{ duration: 0.06, level: 0.07, frequency: 300 }],
+    notes: [{ f: 48, d: 0.06, type: 'square', level: 0.05 }],
+  },
+  'engine-moto': {
+    noise: [{ duration: 0.04, level: 0.08, frequency: 700 }],
+    notes: [{ f: 110, d: 0.05, type: 'sawtooth', level: 0.04 }],
+  },
+  'engine-bike': { noise: [{ duration: 0.03, level: 0.03, frequency: 1400 }] },
+};
 
 export function createAudio() {
   let ctx = null;
   let master = null;
   let radioGain = null;
   let radioTimer = null;
-  let radioStep = 0;
-  let current = 0;
+  let talkHandler = null;
   let ambience = null;
+  const plan = createRadioPlan();
   // Hra začína v tichu: rádio aj dedinský tón sa zapínajú až na pokyn hráča.
   const state = { radioOn: false, ambienceOn: false };
 
@@ -64,6 +130,7 @@ export function createAudio() {
   }
 
   function note(frequency, duration, type = 'triangle', level = 0.25, target = null) {
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     osc.type = type;
     osc.frequency.value = frequency;
@@ -77,21 +144,68 @@ export function createAudio() {
     osc.stop(now + duration + 0.05);
   }
 
+  /** DJ hovorí: pár krátkych slabík cez bandpass, aby to znelo ako hlásenie. */
+  function speak(text) {
+    if (!ctx) return;
+    const target = radioGain ?? master;
+    const syllables = Math.max(3, Math.min(10, Math.round(String(text ?? '').length / 10)));
+    const start = ctx.currentTime;
+    for (let i = 0; i < syllables; i += 1) {
+      const at = start + i * 0.13;
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(110 + (i % 4) * 18, at);
+      osc.frequency.linearRampToValueAtTime(140 + ((i + 1) % 3) * 20, at + 0.1);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 800 + (i % 3) * 250;
+      filter.Q.value = 3;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.exponentialRampToValueAtTime(0.16, at + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
+      osc.connect(filter).connect(gain).connect(target);
+      osc.start(at);
+      osc.stop(at + 0.14);
+    }
+  }
+
+  /** Znelka reklamy: krátky svetlý arpeggio pred hlasom. */
+  function adJingle() {
+    note(660, 0.1, 'triangle', 0.2, radioGain ?? master);
+    setTimeout(() => note(880, 0.12, 'triangle', 0.2, radioGain ?? master), 110);
+    setTimeout(() => note(1320, 0.16, 'triangle', 0.2, radioGain ?? master), 230);
+  }
+
+  /**
+   * Posunie rádio o jeden beat. Noty hrá podľa stupnice stanice, každý
+   * `talkEvery`-tý beat patrí DJ hláseniu alebo reklame (striedajú sa).
+   */
+  function step() {
+    const event = advance(plan);
+    if (event.kind === 'note') {
+      const station = stationAt(plan.station);
+      note(event.frequency, 0.3, station.wave, 0.25);
+    } else {
+      if (event.kind === 'ad') adJingle();
+      speak(event.text);
+      if (talkHandler) talkHandler(event);
+    }
+    return event;
+  }
+
   function startRadio() {
     if (!ctx || state.radioOn) return;
     radioGain = ctx.createGain();
     radioGain.gain.value = 0.5;
     radioGain.connect(master);
     state.radioOn = true;
-    radioStep = 0;
-    const station = STATIONS[current];
-    const period = 60 / station.tempo / 2;
+    const station = stationAt(plan.station);
+    step();
     radioTimer = setInterval(() => {
       if (!state.radioOn) return;
-      const semi = station.scale[radioStep % station.scale.length];
-      note(station.root * Math.pow(2, semi / 12), 0.3);
-      radioStep += 1;
-    }, period * 1000);
+      step();
+    }, (60 / station.tempo / 2) * 1000);
   }
 
   function stopRadio() {
@@ -109,12 +223,18 @@ export function createAudio() {
     else startRadio();
   }
 
+  /** Prepne stanicu a začne od začiatku (iné tempo znamená aj nový interval). */
   function setStation(index) {
-    current = ((index % STATIONS.length) + STATIONS.length) % STATIONS.length;
+    const station = planSetStation(plan, index);
     if (state.radioOn) {
       stopRadio();
       startRadio();
     }
+    return station;
+  }
+
+  function nextStation() {
+    return setStation(plan.station + 1);
   }
 
   function noiseBurst({ duration = 0.12, level = 0.3, frequency = 1800, type = 'lowpass' }) {
@@ -136,35 +256,13 @@ export function createAudio() {
 
   function playSfx(kind) {
     if (!ctx) return;
-    if (kind === 'footstep') noiseBurst({ duration: 0.08, level: 0.12, frequency: 900 });
-    else if (kind === 'gunshot') {
-      noiseBurst({ duration: 0.18, level: 0.5, frequency: 3200 });
-      note(90, 0.12, 'square', 0.2);
-    } else if (kind === 'engine') noiseBurst({ duration: 0.05, level: 0.06, frequency: 400 });
-    else if (kind === 'hit') noiseBurst({ duration: 0.1, level: 0.3, frequency: 1200 });
-    else if (kind === 'swing') noiseBurst({ duration: 0.09, level: 0.12, frequency: 1400 });
-    else if (kind === 'hurt') note(170, 0.16, 'sawtooth', 0.22);
-    else if (kind === 'ko') {
-      noiseBurst({ duration: 0.3, level: 0.45, frequency: 500 });
-      note(65, 0.4, 'square', 0.22);
-    } else if (kind === 'wasted') {
-      note(180, 0.5, 'sawtooth', 0.25);
-      setTimeout(() => note(110, 0.8, 'sawtooth', 0.25), 380);
-    } else if (kind === 'shotgun') {
-      noiseBurst({ duration: 0.42, level: 0.55, frequency: 900 });
-      note(80, 0.3, 'square', 0.25);
-    } else if (kind === 'sniper') {
-      noiseBurst({ duration: 0.5, level: 0.5, frequency: 2600 });
-      note(120, 0.45, 'sawtooth', 0.2);
-    } else if (kind === 'boom') {
-      noiseBurst({ duration: 0.85, level: 0.7, frequency: 300 });
-      note(48, 0.7, 'square', 0.3);
-    } else if (kind === 'pickup') {
-      note(880, 0.08, 'triangle', 0.18);
-      setTimeout(() => note(1320, 0.1, 'triangle', 0.18), 90);
-    } else if (kind === 'horn') {
-      note(420, 0.22, 'square', 0.14);
-      setTimeout(() => note(330, 0.24, 'square', 0.14), 220);
+    const profile = SFX[kind] ?? SFX.gunshot;
+    for (const burst of profile.noise ?? []) noiseBurst(burst);
+    for (const tone of profile.notes ?? []) {
+      const type = tone.type ?? 'triangle';
+      const level = tone.level ?? 0.25;
+      if (tone.delay) setTimeout(() => note(tone.f, tone.d, type, level), tone.delay * 1000);
+      else note(tone.f, tone.d, type, level);
     }
   }
 
@@ -177,8 +275,26 @@ export function createAudio() {
     stopRadio,
     toggleRadio,
     setStation,
-    currentStation: () => current,
+    nextStation,
+    currentStation: () => plan.station,
     isRadioOn: () => state.radioOn,
+    step,
+    radioState: () => ({
+      on: state.radioOn,
+      station: plan.station,
+      name: stationAt(plan.station).name,
+      genre: stationAt(plan.station).genre,
+      beat: plan.beat,
+      song: plan.song,
+      talks: plan.talks,
+      talk: plan.lastTalk,
+      talkText: plan.lastText,
+    }),
+    onTalk: (handler) => {
+      talkHandler = handler;
+    },
+    sfxKinds: () => Object.keys(SFX),
+    sfxProfile: (kind) => SFX[kind] ?? null,
     startAmbience,
     stopAmbience,
     toggleAmbience,

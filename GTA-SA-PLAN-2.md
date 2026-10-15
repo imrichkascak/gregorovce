@@ -368,10 +368,32 @@ priblížila zážitok k SA.
       `LET` (prepne lietanie); písanie na klávesnici (buffer 12 znakov,
       `matchCode` na konci), HUD toast `#cheat-toast`, dotyková stránka
       „Cheaty“ v pauze (8 tlačidiel).
-- [ ] 13.4 Rádio a zvuk hlbšie: ≥ 5 staníc (žánre), DJ hlásenia medzi
+- [x] 13.4 Rádio a zvuk hlbšie: ≥ 5 staníc (žánre), DJ hlásenia medzi
       skladbami a reklamy (procedurálne), sfx podľa zbrane (brokovnica/AK/
       ostreľovačka znejú inak), motor podľa typu. **Kritérium:**
       `audio.stations.length ≥ 5`; DJ/reklama stav; rozdielne sfx.
+      **Dôkaz:** `PASS F13 at least 5 radio stations with genres —
+      stations=6 genres=6`; `PASS F13 DJ announcements and ads play between
+      songs — talks=3 kinds=dj+ad text=Sused, dnes hráme pre celú dedinu aj
+      pre Palyho kravín.`; `PASS F13 radio station can be switched —
+      Playback FM→K-DST`; `PASS F13 every gun has its own shot sound —
+      guns=5 unique=5`; `PASS F13 engine sound depends on the vehicle type —
+      {"car":"engine-car","moto":"engine-moto","bike":"engine-bike"}`;
+      `PASS F13 radio page is available for touch — buttons=7 station=2
+      name=Radio Los Santos`; `PASS F13 station switch shows a HUD caption —
+      📻 Radio Los Santos — gangsta rap box=8288px`; `npm test` **39/39**;
+      `npm run verify` **106/106**. `src/radio-core.js` (6 staníc so žánrom:
+      west coast, klasický rock, gangsta rap, dedinská ľudovka, country,
+      dychovka; plán beatov s `TALK_EVERY = 24`, DJ a reklama sa striedajú,
+      vlastné počítadlá riadkov, `stationRows`), `src/audio.js` (tabuľka
+      `SFX` s profilmi: 5 vlastných zvukov pre zbrane, 3 motory podľa typu,
+      `speak` pre DJ-a cez bandpass, `adJingle`, `step`/`radioState`/
+      `onTalk`/`sfxKinds`/`sfxProfile`), `src/weapons.js` (sfx `pistol`,
+      `smg`, `ak`), `src/vehicles.js` (`engine-${car.type}`), `index.html`
+      (`#radio-caption`, tlačidlo „Rádio“ v pauze, klávesa `Q`),
+      `src/main.js` (`KeyQ` → ďalšia stanica, HUD popis, stránka „Rádio“),
+      unit testy `src/radio-core.test.js` (7 testov, vrátane regresie
+      „posledné hlásenie prežije noty“).
 - [x] 13.5 Opravy podľa spätnej väzby: (1) riadenie auta bolo zrkadlovo
       obrátené (doprava točilo doľava) a auto jazdilo dozadu (svetlá
       vzadu); (2) hudba znela hneď po štarte; (3) loading screen bol
@@ -482,12 +504,13 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | 2026-10-15 | F13.2 Štatistiky hráča | `npm test` 26/26 (6 nových testov `stats.test.js`); `npm run verify` 90/90 (8 nových F13 checkov); 14 počítadiel, rešpekt +1 za KO, živé riadky stránky „Štatistiky“ v pauze, uloženie `gregorovce.stats`; screenshot `/tmp/opencode/f13-stats.png` (16 riadkov) | ✅ |
 | 2026-10-15 | F13.3 Cheaty | `npm test` 31/31 (5 nových testov `cheats.test.js`); `npm run verify` 95/95 (5 nových F13 checkov); 8 kódov (ZDRAVIE, ZBRANE, AUTO, POCASIE, HODINY, POLICIA, PENIAZE, LET) s efektom, HUD toast „CHEAT: …“, dotyková stránka „Cheaty“ v pauze, opravený over-claim F4.3 v `GTA-SA-PLAN.md` | ✅ |
 | 2026-10-15 | F13.5 Opravy podľa spätnej väzby (riadenie, ticho, overlay, favicon, plán) | `npm test` 31/31; `npm run verify` **99/99** (4 nové F4 checky); riadenie: `forward=(sin h, cos h)`, `heading -= steer`, `player.yaw = heading + π` (`along=0.929`, `sideways=0.371`, `nose=1.000`); ticho po štarte (`radio + ambience off by default`, `M`/`🔊` toggle); `#overlay-art` = `cover` (1100×780 aj 430×900 = celá plocha); `favicon.svg` + `favicon.png` (PNG 180×180: 48 % pozadie, 19 % kopec, 10,6 % žltá, 1,3 % červená); `ENGINE-PLAN.md` (len plán) | ✅ |
+| 2026-10-15 | F13.4 Rádio a zvuk hlbšie | `npm test` **39/39** (7 nových testov `radio-core.test.js`, vrátane regresie „posledné hlásenie prežije noty“); `npm run verify` **106/106** (7 nových F13 checkov); 6 staníc so žánrom (`stations=6 genres=6`), DJ hlásenia a reklamy sa striedajú medzi skladbami (`talks=3 kinds=dj+ad`), prepnutie stanice (`Playback FM→K-DST`, klávesa `Q`, dotyková stránka „Rádio“ s `buttons=7`), vlastný zvuk pre každú strelnú zbraň (`guns=5 unique=5`), motor podľa typu (`{"car":"engine-car","moto":"engine-moto","bike":"engine-bike"}`), HUD popis rádia (`box=8288px`); opravená plávajúca‑bodová chyba v checku `hodiny` (tolerancia 0,01 min) | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 
 | B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | B9 | B10 | B11 | B12 | B13 | B14 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 1 | 1 |
+| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 1 |
 
 Poznámky k skóre (po F12): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
 bránia + telá; WASTED + respawn + armor + nemocnica). B2 = 1 → bránia sa, telá a
@@ -507,5 +530,8 @@ smrti, autá, zárobok/útrata — a stránka „Štatistiky“ v pauze so živ�
 hodnotami, uložená v localStorage; F13.2). B12 = 2 (8 kódov s programovým
 efektom — zdravie+vesta, všetky zbrane, auto, počasie, čas, polícia, peniaze,
 lietanie — písané na klávesnici s HUD potvrdením „CHEAT“ a dotykovou stránkou
-„Cheaty“ v pauze; F13.3). B13 = 1 (3 stanice + sfx podľa
-zbrane) → DJ/reklámy F13.4. B14 = 1 → zvieratá/skupinky/AI reakcie/FPS check F14.
+„Cheaty“ v pauze; F13.3). B13 = 2 (6 staníc so žánrom — west coast, klasický
+rock, gangsta rap, dedinská ľudovka, country, dychovka — DJ hlásenia a reklamy
+medzi skladbami, vlastný zvuk pre každú strelnú zbraň a motor podľa typu vozidla,
+HUD popis rádia, dotyková stránka „Rádio“ v pauze a klávesa `Q`; F13.4).
+B14 = 1 → zvieratá/skupinky/AI reakcie/FPS check F14.

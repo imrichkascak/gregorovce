@@ -185,6 +185,24 @@
       #busted.hidden {
         display: none;
       }
+      #radio-caption {
+        position: fixed;
+        top: 116px;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: min(560px, 86vw);
+        padding: 7px 16px;
+        background: rgba(12, 14, 18, 0.82);
+        border: 2px solid #c8b06a;
+        border-radius: 8px;
+        color: #f3e7c8;
+        font-family: "Barlow Condensed", "Anton", sans-serif;
+        font-size: 15px;
+        line-height: 1.25;
+        text-align: center;
+        z-index: 7;
+        pointer-events: none;
+      }
       #cheat-toast {
         position: fixed;
         top: 72px;
@@ -642,6 +660,7 @@
       <small id="busted-fine"></small>
     </div>
     <div id="cheat-toast" class="hidden"></div>
+    <div id="radio-caption" class="hidden"></div>
     <div id="dialogue" class="hidden">
       <div id="dialogue-name"></div>
       <div id="dialogue-text"></div>
@@ -687,7 +706,7 @@
       <div id="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> pohyb &nbsp; <kbd>Shift</kbd> beh &nbsp; <kbd>Space</kbd> skok/brzda</div>
         <div><kbd>C</kbd> kamera &nbsp; <kbd>E</kbd> auto &nbsp; <kbd>F</kbd> rozhovor &nbsp; <kbd>ľavé</kbd> streľba/úder &nbsp; <kbd>pravé</kbd> mierenie &nbsp; <kbd>1</kbd>–<kbd>0</kbd> zbraň</div>
-        <div><kbd>V</kbd> počasie &nbsp; <kbd>T</kbd> rádio &nbsp; <kbd>M</kbd> dedinský tón &nbsp; <kbd>B</kbd> úplatok &nbsp; <kbd>R</kbd> pád &nbsp; <kbd>F5</kbd>/<kbd>F9</kbd> save/load &nbsp; <kbd>Esc</kbd> menu</div>
+        <div><kbd>V</kbd> počasie &nbsp; <kbd>T</kbd> rádio &nbsp; <kbd>Q</kbd> stanica &nbsp; <kbd>M</kbd> dedinský tón &nbsp; <kbd>B</kbd> úplatok &nbsp; <kbd>R</kbd> pád &nbsp; <kbd>F5</kbd>/<kbd>F9</kbd> save/load &nbsp; <kbd>Esc</kbd> menu</div>
       </div>
     </div>
     <div id="overlay">
@@ -701,6 +720,7 @@
         <button data-action="stats">Štatistiky</button>
         <button data-action="quests">Questy</button>
         <button data-action="cheats">Cheaty</button>
+        <button data-action="radio">Rádio</button>
         <button data-action="quit">Ukončiť</button>
         <div id="pause-content"></div>
       </div>

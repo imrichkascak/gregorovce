@@ -33,6 +33,7 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | `1`–`0` | prepni zbraň (päsť, nôž, bejzbal, pištoľ, brokovnica, samopal, AK-47, ostreľovačka, granát, molotov) |
 | `V` | prepni počasie (jasno / zamračené / dážď) |
 | `T` | rádio zap/vyp (predvolene ticho) |
+| `Q` | ďalšia stanica (6 rádií so žánrom) |
 | `M` | dedinský tón zap/vyp (predvolene ticho) |
 | `B` | úplatok (zníž wanted level) |
 | `R` | pád zhora na cestu pred kostol |
@@ -41,11 +42,14 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | `Esc` | pauza (menu, questy, štatistiky, cheaty) |
 | písanie kódov | cheaty: `ZDRAVIE`, `ZBRANE`, `AUTO`, `POCASIE`, `HODINY`, `POLICIA`, `PENIAZE`, `LET` |
 
-**Systémy:** viditeľná postava v 3. osobe s animáciami, deň/noc a počasie, rádio,
+**Systémy:** viditeľná postava v 3. osobe s animáciami, deň/noc a počasie, **rádio
+(6 staníc so žánrom — Playback FM, K-DST, Radio Los Santos, Rádio Gregorovce,
+Hornád Country, Košický dych — DJ hlásenia a reklamy medzi skladbami, prepínanie
+klávesou `Q` a dotykovou stránkou „Rádio“ v pauze, popis v HUD)**,
 jazditeľné autá, zbrane a boj (melee kombo, knockdown, krv), bitky s NPC
 (chuligáni sa bránia), **10 zbraní** (päsť, nôž, bejzbal, pištoľ, brokovnica,
 samopal, AK-47, ostreľovačka, granát, molotov) s mierením, crosshairom a kamerou
-cez rameno, **efekty streľby** (tracery, nábojnice, diery po guľkách, výbuchy),
+cez rameno a **vlastným zvukom pre každú strelnú zbraň**, **efekty streľby** (tracery, nábojnice, diery po guľkách, výbuchy),
 **pickupy** zbraní/munície/zdravia/armoru s respawnom, **drive-by** z auta
 (zasiahnutý vodič vyskočí a utečie), zdravie a armor hráča, WASTED smrť
 s respawnom v nemocnici, **polícia** (hliadky s blikajúcou sirénou, peší policajti
@@ -65,7 +69,8 @@ potvrdením „CHEAT: …“ a dotykovou stránkou „Cheaty“ v pauze), save/l
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
 tlačidlá `KAM` (kamera), `E` (auto), `🔫` (úder / streľba), `🎯` (mierenie),
 `ZB` (zbraň), `💬` (rozhovor / vstup do budovy), `↑` / `↓` / `FLY` / `🔊` (dedinský tón) / `R` vpravo dole, `MENU`
-vľavo hore sa vráti do menu.
+vľavo hore sa vráti do menu. V pauze je aj stránka **„Rádio“** s tlačidlom pre každú
+stanicu (a zapnutím/vypnutím rádia), takže sa stanice dajú prepínať aj na mobile.
 
 ## Ako to funguje
 
@@ -110,34 +115,38 @@ Klient (`src/`) potom:
 15. `daynight.js` — cyklus dňa/noci, slnko a pouličné svetlá.
 16. `weather.js` — počasie (jasno/zamračené/dážď).
 17. `audio.js` — procedurálny WebAudio: dedinský tón (predvolene vypnutý, `M`),
-    3 rádiá, kroky/motor/výstrel/trúbenie — hra začína v tichu.
-18. `combat.js` — čistá logika boja (armor pohltenie, melee kužeľ, combo okno) + unit testy.
-19. `weapons.js` — 10 zbraní (melee, strelné, granát/molotov), mierenie, spread,
-    projektily a výbuchy, drive-by.
-20. `effects.js` — poolované častice (krv, dym, oheň, iskry, nábojnice), tracery,
+    **6 rádií** (Playback FM, K-DST, Radio Los Santos, Rádio Gregorovce, Hornád
+    Country, Košický dych) s DJ hláseniami a reklamami medzi skladbami, vlastný
+    zvuk pre každú strelnú zbraň a motor podľa typu vozidla — hra začína v tichu.
+18. `radio-core.js` — čistá logika rádia (stanice so žánrom, plán beatov, DJ
+    hlásenia a reklamy, prepínanie staníc) + unit testy.
+19. `combat.js` — čistá logika boja (armor pohltenie, melee kužeľ, combo okno) + unit testy.
+20. `weapons.js` — 10 zbraní (melee, strelné, granát/molotov), mierenie, spread,
+    projektily a výbuchy, drive-by, vlastný zvuk pre každú strelnú zbraň.
+21. `effects.js` — poolované častice (krv, dym, oheň, iskry, nábojnice), tracery,
     diery po guľkách (InstancedMesh), 1 draw call na druh.
-21. `pickups.js` — plávajúce pickupy zbraní/munície/zdravia/armoru s respawnom.
-22. `quests-core.js` — čistý stavový automat questov (fázy, fail/retry, reťaze) + unit testy.
-23. `dialogue.js` — dialógové okno s číslovanými voľbami (klik/tap/`1`–`9`).
-24. `quests.js` — 12 questov, 10 quest giverov s menovkou a bublinou, quest log,
+22. `pickups.js` — plávajúce pickupy zbraní/munície/zdravia/armoru s respawnom.
+23. `quests-core.js` — čistý stavový automat questov (fázy, fail/retry, reťaze) + unit testy.
+24. `dialogue.js` — dialógové okno s číslovanými voľbami (klik/tap/`1`–`9`).
+25. `quests.js` — 12 questov, 10 quest giverov s menovkou a bublinou, quest log,
     radar waypoint, rešpekt, 3 uličné misie, 10 fliaš.
-25. `interiors.js` — interiéry: kostol, krčma, obchod a úrad (vlastná miestnosť
+26. `interiors.js` — interiéry: kostol, krčma, obchod a úrad (vlastná miestnosť
     s NPC a interakciou, menovka „F vstup“ pri budove, výstup späť pred budovu).
-26. `stats.js` — štatistiky hráča: 14 počítadiel (čas, km pešo/autom, questy,
+27. `stats.js` — štatistiky hráča: 14 počítadiel (čas, km pešo/autom, questy,
     misie, bitky, KO, zločiny, hviezdy, zatknutia, smrti, autá, zárobok/útrata)
     + unit testy, uloženie do localStorage.
-27. `cheats.js` — 8 cheatov písaných na klávesnici (ZDRAVIE, ZBRANE, AUTO,
+28. `cheats.js` — 8 cheatov písaných na klávesnici (ZDRAVIE, ZBRANE, AUTO,
     POCASIE, HODINY, POLICIA, PENIAZE, LET) s HUD potvrdením „CHEAT: …“
     a dotykovou stránkou „Cheaty“ v pauze.
-28. `vehicles.js` — vstup do auta/motorky/bicykla (carjack — vodič vyskočí a utečie)
+29. `vehicles.js` — vstup do auta/motorky/bicykla (carjack — vodič vyskočí a utečie)
     a jazda s fyzikou podľa typu.
-29. `wanted.js` — wanted level: hliadky s blikajúcou sirénou, peší policajti (streľba,
+30. `wanted.js` — wanted level: hliadky s blikajúcou sirénou, peší policajti (streľba,
     zatknutie s pokutou a BUSTED overlayom), zátarasy od 4 hviezd, chladenie hviezd
     v úkryte a lakovacia garáž pri obchode.
-30. `missions.js` — misijné markery, obchody, save/load.
-31. `postfx.js` — jemný PS2 bloom (EffectComposer).
-32. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
-33. `main.js` — poskladá scénu, HUD a herný loop.
+31. `missions.js` — misijné markery, obchody, save/load.
+32. `postfx.js` — jemný PS2 bloom (EffectComposer).
+33. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
+34. `main.js` — poskladá scénu, HUD a herný loop.
 
 Všetko je zlúčené do niekoľkých meshov, takže scéna zvládne aj slabší stroj.
 
@@ -151,7 +160,7 @@ a go/no-go kritériá pre prípadný Godot spike.
 ## Overenie
 
 ```bash
-npm test        # unit testy (motion, rules, combat, quests-core, stats, cheats)
+npm test        # unit testy (motion, rules, combat, quests-core, stats, cheats, radio-core)
 npm run verify  # server + Playwright assertions pre všetky fázy (GTA-SA-PLAN.md, GTA-SA-PLAN-2.md)
 ```
 

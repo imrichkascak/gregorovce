@@ -259,12 +259,29 @@ const wastedOverlay = document.getElementById('wasted');
 const bustedOverlay = document.getElementById('busted');
 const bustedFine = document.getElementById('busted-fine');
 const cheatToast = document.getElementById('cheat-toast');
+const radioCaption = document.getElementById('radio-caption');
 const btnTalk = document.getElementById('btn-talk');
 const pauseMenu = document.getElementById('pause-menu');
 const pauseContent = document.getElementById('pause-content');
 
 let pausePage = null;
 let statsRefresh = 0;
+let radioCaptionTimer = 0;
+
+/** Ukáže v HUD popis stanice alebo hlásenie DJ-a / reklamu. */
+function showRadioCaption(text, seconds = 4) {
+  radioCaption.textContent = text;
+  radioCaption.classList.remove('hidden');
+  radioCaptionTimer = seconds;
+}
+
+/** Krátky popis stanice po prepnutí (dotyk aj klávesa Q). */
+function announceStation() {
+  const radio = audio.radioState();
+  showRadioCaption(`📻 ${radio.name} — ${radio.genre}`, 3);
+}
+
+audio.onTalk((event) => showRadioCaption(`${event.kind === 'ad' ? '📢' : '🎙️'} ${event.text}`, 4));
 
 let hitMarkerTimer = null;
 
@@ -308,6 +325,10 @@ document.addEventListener('keydown', (event) => {
   }
   if (event.code === 'KeyV') weather.cycle();
   if (event.code === 'KeyT') audio.toggleRadio();
+  if (event.code === 'KeyQ') {
+    audio.nextStation();
+    announceStation();
+  }
   if (event.code === 'KeyM') audio.toggleAmbience();
   if (event.code === 'KeyB') wanted.bribe();
   if (event.code === 'F5') {
@@ -520,6 +541,27 @@ for (const button of document.querySelectorAll('#pause-menu button')) {
               })
               .join('<br>')
           : 'Zatiaľ žiadne questy. Postavy s ! nad hlavou čakajú na dedine.');
+    } else if (action === 'radio') {
+      const rows = audio.stations.map(
+        (station, index) =>
+          `<button class="cheat-row" data-station="${index}">${station.name} — ${station.genre}</button>`,
+      );
+      pauseContent.innerHTML =
+        `<b>Rádio</b><br>Staníc je ${rows.length}, DJ hlásenia a reklamy sa striedajú medzi skladbami:<br>` +
+        rows.join('') +
+        `<button class="cheat-row" data-station="off">${
+          audio.isRadioOn() ? 'Vypnúť rádio' : 'Zapnúť rádio'
+        }</button>`;
+      for (const stationButton of pauseContent.querySelectorAll('[data-station]')) {
+        stationButton.addEventListener('click', () => {
+          if (stationButton.dataset.station === 'off') audio.toggleRadio();
+          else audio.setStation(Number(stationButton.dataset.station));
+          announceStation();
+          pauseContent.querySelector('[data-station="off"]').textContent = audio.isRadioOn()
+            ? 'Vypnúť rádio'
+            : 'Zapnúť rádio';
+        });
+      }
     } else if (action === 'cheats') {
       pauseContent.innerHTML =
         '<b>Cheaty</b><br>Kódy sa píšu na klávesnici (na mobile ťukni na kód):<br>' +
@@ -595,6 +637,11 @@ function tick() {
     cheatToast.classList.remove('hidden');
   } else {
     cheatToast.classList.add('hidden');
+  }
+  // Popis rádia (stanica, DJ hlásenie, reklama) zmizne po pár sekundách.
+  if (radioCaptionTimer > 0) {
+    radioCaptionTimer -= dt;
+    if (radioCaptionTimer <= 0) radioCaption.classList.add('hidden');
   }
   // Stránka „Štatistiky“ v pauze sa obnovuje, aby ukazovala živé hodnoty.
   if (pausePage === 'stats' && !pauseMenu.classList.contains('hidden')) {

@@ -945,7 +945,7 @@ async function desktop() {
     // HODINY — posunie čas o 6 hodín.
     const timeBefore = dayNight.state.time;
     cheats.activate('hodiny');
-    effects.hodiny = (((dayNight.state.time - timeBefore) % 1440) + 1440) % 1440 === 360;
+    effects.hodiny = Math.abs((((dayNight.state.time - timeBefore) % 1440) + 1440) % 1440 - 360) < 0.01;
 
     // POLICIA — zmaže hviezdy.
     wanted.crime(3);
@@ -993,6 +993,127 @@ async function desktop() {
   check('F13 typing a code on the keyboard fires it', f133.typed && f133.noEarlyTrigger && f133.lateTrigger, `typed=${f133.typed} early=${f133.noEarlyTrigger} late=${f133.lateTrigger}`);
   check('F13 cheat shows a HUD confirmation', cheatToastShown, `toast=${f133.toast}`);
   check('F13 cheat list is available for touch', f133.rows >= 6, `rows=${f133.rows}`);
+
+  // F13.4 — rádio: 6 staníc so žánrom, DJ hlásenia a reklamy medzi
+  // skladbami, vlastný zvuk pre každú strelnú zbraň a motor podľa typu.
+  const f134 = await page.evaluate(() => {
+    const { audio, weapons, vehicles, world, player, geo } = window.__gregorovce;
+    const traffic = world.traffic;
+    const result = {};
+
+    result.stations = audio.stations.length;
+    result.everyGenre = audio.stations.every((station) => !!station.genre && !!station.name);
+    result.genres = new Set(audio.stations.map((station) => station.genre)).size;
+
+    // DJ hlásenia a reklamy sa striedajú medzi skladbami.
+    audio.resume();
+    result.stationBefore = audio.radioState().name;
+    audio.startRadio();
+    const talks = [];
+    for (let i = 0; i < 80; i += 1) {
+      const event = audio.step();
+      if (event.kind !== 'note') talks.push(event.kind);
+    }
+    result.talks = talks.length;
+    result.kinds = [...new Set(talks)];
+    result.talkText = audio.radioState().talkText;
+    result.talkCount = audio.radioState().talks;
+    audio.stopRadio();
+    result.silentAfterStop = !audio.isRadioOn();
+
+    // Prepnutie stanice (klávesa Q / dotyková stránka).
+    const stationBefore = audio.radioState().station;
+    audio.nextStation();
+    result.stationChanged = audio.radioState().station !== stationBefore;
+    result.stationName = audio.radioState().name;
+    result.stationRows = audio.stations.length;
+    audio.setStation(0);
+
+    // Každá strelná zbraň má vlastný zvuk.
+    const guns = weapons.list.filter((weapon) => weapon.sfx);
+    result.guns = guns.length;
+    result.uniqueGunSfx = new Set(guns.map((weapon) => weapon.sfx)).size;
+    result.knownSfx = guns.every((weapon) => audio.sfxKinds().includes(weapon.sfx));
+    result.profilesDiffer =
+      new Set(guns.map((weapon) => JSON.stringify(audio.sfxProfile(weapon.sfx)))).size === guns.length;
+
+    // Motor znie inak pre auto, motorku a bicykel.
+    const engine = {};
+    const origSfx = audio.playSfx;
+    const kinds = [];
+    audio.playSfx = (kind) => kinds.push(kind);
+    for (const type of ['car', 'moto', 'bike']) {
+      const unit = traffic.spawnCar(player.position.x, player.position.z, type);
+      if (!unit) continue;
+      player.position.set(
+        unit.object.position.x,
+        geo.heightAt(unit.object.position.x, unit.object.position.z),
+        unit.object.position.z + 0.4,
+      );
+      if (!vehicles.enter()) continue;
+      vehicles.state.speed = 12;
+      kinds.length = 0;
+      vehicles.update(0.2);
+      engine[type] = kinds[0] ?? null;
+      vehicles.exit();
+    }
+    audio.playSfx = origSfx;
+    result.engine = engine;
+    result.uniqueEngines = new Set(Object.values(engine).filter(Boolean)).size;
+    return result;
+  });
+  check('F13 at least 5 radio stations with genres', f134.stations >= 5 && f134.everyGenre, `stations=${f134.stations} genres=${f134.genres}`);
+  check(
+    'F13 DJ announcements and ads play between songs',
+    f134.kinds.includes('dj') && f134.kinds.includes('ad') && f134.talkText.length > 10 && f134.talkCount >= 3 && f134.silentAfterStop,
+    `talks=${f134.talks} kinds=${f134.kinds.join('+')} text=${f134.talkText}`,
+  );
+  check(
+    'F13 radio station can be switched',
+    f134.stationChanged && f134.stationName !== f134.stationBefore && f134.stationRows >= 5,
+    `${f134.stationBefore}→${f134.stationName}`,
+  );
+  check(
+    'F13 every gun has its own shot sound',
+    f134.guns >= 5 && f134.uniqueGunSfx === f134.guns && f134.knownSfx && f134.profilesDiffer,
+    `guns=${f134.guns} unique=${f134.uniqueGunSfx}`,
+  );
+  check(
+    'F13 engine sound depends on the vehicle type',
+    f134.uniqueEngines === 3,
+    JSON.stringify(f134.engine),
+  );
+
+  // Dotyková parita: stránka „Rádio“ v pauze má tlačidlo pre každú stanicu
+  // a ťuknutie prepne stanicu s popisom v HUD.
+  const radioPage = await page.evaluate(() => {
+    const { player, audio } = window.__gregorovce;
+    player.pause();
+    document.querySelector('#pause-menu button[data-action="radio"]').click();
+    const buttons = document.querySelectorAll('#pause-content [data-station]').length;
+    document.querySelector('#pause-content [data-station="2"]').click();
+    const caption = document.getElementById('radio-caption');
+    const box = caption.getBoundingClientRect();
+    return {
+      buttons,
+      expected: audio.stations.length + 1,
+      station: audio.radioState().station,
+      name: audio.radioState().name,
+      caption: caption.textContent,
+      captionShown: !caption.classList.contains('hidden'),
+      captionBox: Math.round(box.width) * Math.round(box.height),
+    };
+  });
+  check(
+    'F13 radio page is available for touch',
+    radioPage.buttons === radioPage.expected && radioPage.station === 2,
+    `buttons=${radioPage.buttons} station=${radioPage.station} name=${radioPage.name}`,
+  );
+  check(
+    'F13 station switch shows a HUD caption',
+    radioPage.captionShown && radioPage.captionBox > 0 && radioPage.caption.includes(radioPage.name),
+    `${radioPage.caption} box=${radioPage.captionBox}px`,
+  );
 
   check('no console errors', errors.length === 0, errors.join(' | '));
   await browser.close();
