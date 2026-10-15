@@ -1,0 +1,336 @@
+# GTA Gregorovce 2 — hĺbka: maximálna funkčná podobnosť s GTA: San Andreas
+
+Druhá iterácia. `GTA-SA-PLAN.md` (Fázy 0–8) postavil **kostru** hry — postava,
+kamera, radar, deň/noc, počasie, rádio, autá, zbrane, wanted, polícia, misie,
+obchody, save/load. Všetko to beží (`npm run verify` 30/30), ale hĺbka je malá:
+misie sú „prejdi z bodu A do bodu B“, NPC len chodia/utekajú/ležia, hráč nikdy
+nemôže dostať poškodenie, cheaty v kóde neexistujú. Táto iterácia ide po **zážitku**:
+keď hráč príde na miesto, má tam čo robiť; NPC sa dajú zmlátiť a vedia sa brániť;
+streľba je naplno použiteľná; svet žije. Cieľ je **maximálny možný výsledok** —
+ukázať, čo dnešné modely dokážu.
+
+Tento súbor je zároveň **pracovný checklist a protokol**. Agent po každej iterácii
+odškrtne úlohu, zapíše dôkaz a pokračuje. **Neodškrtávaj bez programového
+overenia.**
+
+---
+
+## 0. Ako spustiť (prompt pre `/goal` + gates)
+
+Skopíruj tento blok do Hermesa spusteného v tomto repozitári:
+
+```text
+GTA Gregorovce → maximálna funkčná podobnosť s GTA: San Andreas. Iteruj podľa `GTA-SA-PLAN-2.md`, kým nie je splnená celá rubrika V2 a všetky fázy 9–14 odškrtnuté s programovým dôkazom. Ide o hĺbku, nie kostru: každé významné miesto v obci má quest alebo interaktivitu; NPC sa dajú zmlátiť a vedia sa brániť (reakcie, knockdown, krv, smrť); hráč vie dostať poškodenie a zomrieť (WASTED → respawn); streľba je naplno použiteľná (mierenie, zásahy, efekty, pickupy, drive-by); pribudne quest log s dialógmi, interiéry, štatistiky a cheaty.
+
+verify: `npm test` a `npm run verify` (scripts/verify.cjs rozšírený o assertions pre každú novú fázu) prejdú na 100 % s exit 0 a bez console errorov; v `GTA-SA-PLAN-2.md` je každá úloha odškrtnutá s dôkazom v Progress logu a rubrika V2 je na prahu (všetky znaky ≥ 1, ≥ 80 % znakov = 2); `git log` obsahuje commit `[GTA-SA-2] …` pre každú fázu.
+
+constraints: Nič nerozbíjaj — všetkých 30 starých verify checkov a 8 unit testov ostáva zelených; rozpočet výkonu ≤ ~200 draw callov a ≥ 50 FPS; každá nová mechanika má dotykový ekvivalent; štýl ostáva PS2 (žiadny fotorealizmus), dedinské gagy a slovenčina ostávajú; žiadne nové npm závislosti ani externé assety (všetko procedurálne ako doteraz); estetika neblokuje loop — screenshoty do `/tmp/opencode` a pokračuj.
+
+boundaries: Repozitár `/Users/imrichkascak/repositories/gregorovce` — `src/`, `index.html`, `scripts/`, `data/`, `AGENTS.md`, `README.md`, `GTA-SA-PLAN-2.md`; malé commity `[GTA-SA-2] <fáza> <popis>`; deploy `npx vercel --prod --yes` len ak je CLI dostupné, inak preskoč.
+
+stop when: Zastav sa len ak rozhodnutie mení rozsah alebo smer (externé assety, licencie, multiplayer), alebo sa niečo nedá overiť programovo ani unit testom, alebo si 3 kolá po sebe bez pokroku na tej istej úlohe, alebo človek pošle správu. Inak pokračuj sám.
+```
+
+Hneď po nastavení cieľa pridaj deterministické brány (musia prejsť, kým sa cieľ
+môže vyhlásiť za hotový):
+
+```text
+/goal gate add npm test
+/goal gate add npm run verify
+```
+
+Poznámky:
+
+- `/goal` (nie `/loop`) je správna voľba: cieľ je jedna objektívna úloha s
+  definíciou hotovo, ktorú sudca vyhodnocuje po každom ťahu. `/loop` je
+  timer-driven (polling/monitoring) — sem sa nehodí.
+- Rozpočet je 20 ťahov na jedno spustenie (`goals.max_turns`). Keď sa minie a
+  cieľ sa pauzne, pokračuj `/goal resume` (vynuluje počítadlo). Dá sa aj zvýšiť:
+  `hermes config set goals.max_turns 60`.
+- Keď počas behu zistíš, že niečo chýba, pridaj kritérium za behu:
+  `/subgoal <text>` — sudca ho musí tiež splniť.
+
+---
+
+## 1. Pravidlá pre agenta (čítaj pred každou iteráciou)
+
+1. **Agent nevidí obrázky.** Verifikácia je **programová** (Playwright assertions
+   cez `window.__gregorovce` + DOM), **unit** (`npm test`) a pre človeka
+   **screenshoty** do `/tmp/opencode`. Estetické brány **neblokujú loop** —
+   vygeneruj screenshoty, poznamenaj ich v odpovedi a pokračuj; človek ich
+   skontroluje, keď bude chcieť, a jeho úprava má prednosť.
+2. **Nikdy nenechaj strom rozbitý.** Po každej zmene: `npm test` zelené, žiadne
+   console errory, `npm run verify` prejde.
+3. **Malé kroky.** Jedna úloha = jedna najmenšia zmena, ktorá splní kritérium,
+   + commit `[GTA-SA-2] <fáza> <popis>`.
+4. **Bez regresie.** Po každej zmene znovu celý `npm run verify` — všetkých 30
+   starých checkov musí stále prejsť (a pribúdajú nové).
+5. **Rozpočet výkonu.** ≤ ~200 draw callov, ≥ 50 FPS na slabom stroji.
+6. **Mobil na rovnakej úrovni.** Každá nová mechanika má dotykový ekvivalent
+   (tlačidlo/gesto), inak ju na mobil nezavádzaj.
+7. **Cheaty a gagy sú súčasť zážitku.** Dedinské gagy (`gags.js`), bublina
+   `SUCK MY DICK EVERYDAY`, Pali s Banánom a cheaty nechať.
+8. **Slovenčina** v kóde/UI, README a komentáre ako doteraz.
+9. **Dôveruj kódu, nie checkom.** Plán 1 miestami nadhodnocuje (viď § 2 nižšie).
+   Každé staré kritérium over programovo; čo v kóde nie je, je diera.
+10. **Vystav každý nový systém na `window.__gregorovce`** (napr. `world.combat`,
+    `world.quests`, `world.dialogue`, `world.pickups`, `world.interiors`,
+    `world.animals`, `player.stats`…), aby sa dal overiť programovo. Každá nová
+    čistá logika dostane unit test (`src/*.test.js`).
+11. **Každé akceptačné kritérium = aspoň jeden check v `scripts/verify.cjs`.**
+    Over, že kritérium naozaj platí — nestačí, že systém existuje; musí aj
+    reagovať (zásah uberie health, quest sa dokončí a pripíše peniaze…).
+12. **V každej odpovedi** (ťahu) zhrň: čo pribudlo + dôkaz (výstup príkazu) +
+    stav rubriky V2 + ďalší krok. Sudca vidí len odpoveď — bez dôkazu v odpovedi
+    nebude vedieť, že si pokročil.
+
+### Verifikačný harness (rozšíriť)
+
+- `npm test` — unit testy (`node --test`).
+- `npm run verify` (`scripts/verify.cjs`) — server + headless Chrome + programové
+  assertions + screenshoty do `/tmp/opencode`. **Rozšír o assertions pre každú novú
+  úlohu fázy 9–14** (aspoň 1 check na úlohu; kritérium hotovo = check zelený).
+- Debug handle `window.__gregorovce` — každý nový systém vystav tu.
+
+---
+
+## 2. Východiská a známe diery
+
+**Hotové (Fáza 0–8 plánu 1):** postava 3. osoby s animáciami, kamera s kolíziou,
+radar s blipmi, deň/noc, počasie, rádio (3 stanice), jazditeľné autá, zbrane
+(päsť, bejzbal, pištoľ, samopal), wanted 0–6 s policajnými autami, misijné markery
++ obchody + save/load, PS2 bloom, mobil. `npm test` 8/8, `npm run verify` 30/30.
+
+**Over-claimy plánu 1 (over v kóde a oprav v rámci fáz 9–14):**
+
+- F4.3 „cheat na spawn auta“ — v kóde **žiadny cheat neexistuje** (žiadny kód,
+  žiadny keydown handler). Kryje to Fáza 13.3.
+- F5.4 „zdravie/brnenie hráča, smrť → respawn“ — `player.health` sa inicializuje
+  na 100, ale **nikdy neklesá** (nič ho neznižuje, armor sa nikdy nepoužije).
+  Kryje to Fáza 9.4.
+- F6.3 „spray, čas“ — spray ani časový pokles wanted v kóde nie sú. Kryje to
+  Fáza 12.2.
+- F8.2 „gang tagy“ — v kóde nie sú. Pokry to Fáza 14.1 (alebo vynechať).
+
+**Konkrétne diery, ktoré táto iterácia zatvára:**
+
+- NPC nemajú útočné animácie hráča, nedajú sa knockdownúť, nebránia sa.
+- Hráč nemá damage, smrť, WASTED, respawn za smrť, armor.
+- Misie sú len „prejdi k markeru“ — žiadne fázy, dialógy, quest giveri, quest log,
+  fail/retry, vedľajšie misie, zberateľské predmety.
+- Streľba bez mierenia, bez pickupov, bez granátov/ostreľovačky/brokovnice, bez
+  drive-by, bez efektov (tracer, nábojnice, krv, výbuchy).
+- Polícia len autá bez peších, bez streľby, bez roadblockov, bez hľadania.
+- Vozidlá bez motorky/bicykla, bez carjackingu (vodič v aute nemá AI).
+- Žiadne interiéry, žiadne štatistiky hráča (rešpekt/skilly), žiadne cheaty.
+- Rádio 3 stanice bez DJ/reklám, málo NPC/áut, žiadne zvieratá.
+
+**Lokácie, ktoré musia mať obsah** (z OSM dát a gagov): kostol (sv. Márie),
+Prima bar (krčma), Coop Jednota (obchod), Obecný úrad, DHZO (hasiči), škola,
+ihriská (leisure=pitch ×3), detské ihrisko (playground), dom 101 (gag), žumpa 217
+(gag), Pali a Mata (gag). Cieľ: každé z nich má quest alebo interaktivitu.
+
+---
+
+## 3. Fázy 9–14 (úlohy a akceptačné kritériá)
+
+Každá úloha má **akceptačné kritérium** (programové) a **dôkaz** (príkaz/výstup
+zapísaný do Progress logu). Poradie je zvolené tak, aby každá fáza viditeľne
+priblížila zážitok k SA.
+
+### Fáza 9 — Bitky a živé NPC
+
+- [ ] 9.1 Melee útoky hráča: animácie úderov avatara (ľavý hák, pravý hák, kop),
+      hitbox podľa uhla a dosahu, 3-úderové combo, úder funguje aj počas behu.
+      **Kritérium:** `avatar` má stav útoku (napr. `avatar.state.pose === 'punch'`);
+      NPC v dosahu stratí `health`; 3 rýchle údery → `ped.state === 'knockdown'`.
+- [ ] 9.2 Reakcie NPC na zásah: flinch (odskočenie), knockdown (spadne, chvíľu
+      leží), vstane (~2–4 s) alebo sa vzdiali; krvavé častice; smrť = telo ostane
+      (fade). **Kritérium:** po zásahu `ped.state === 'stagger'` alebo
+      `'knockdown'`; po knockdowne sa vráti `walk`; pri 0 health `dead` telo ostane.
+- [ ] 9.3 NPC sa bránia: typ NPC (napr. chuligáni pri krčme), pri útoku sa
+      rozbehnú k hráčovi, udierajú; hráč stráca `health`; dá sa vyhrať (NPC
+      knockdown) aj prehrať (hráč KO). **Kritérium:** `ped.state === 'fight'`;
+      `player.health` klesá pri zásahu od NPC.
+- [ ] 9.4 Hráčove zdravie a smrť: pád z výšky, náraz auta, zásah → `health`
+      klesá; `armor` pohlcuje časť zásahu; pri 0 → WASTED obrazovka → respawn
+      (nemocnica) so stratou peňazí; HUD bar pre health/armor.
+      **Kritérium:** `player.health` klesne po zásahu; pri 0 → WASTED flow +
+      respawn; armor absorbuje ≥ 50 %.
+- [ ] 9.5 Feedback boja: kamera shake pri údere/výstrele, krv, zvuky úderov
+      (punch/hurt/KO), hit marker. **Kritérium:** `world.effects.blood > 0` po
+      zásahu; `cameraRig.state.shake ≠ 0`; nové zvuky hrajú.
+
+### Fáza 10 — Questy, dialógy a interaktivita na miestach
+
+- [ ] 10.1 Quest framework: definície questov (id, fázy, ciele, časové limity,
+      odmeny, fail/retry), stav `world.quests`, quest log v pause menu, waypoint
+      na radare pre aktívny cieľ. **Kritérium:** `world.quests` má ≥ 1 definíciu;
+      quest log zobrazí aktívny quest; radar blip cieľa.
+- [ ] 10.2 Dialógový systém: UI dialógu s voľbami (prijať/odmietnuť/pokračovať),
+      rečnícke postavy (quest giveri) ako 3D NPC s menovkou a bublinou, dialóg sa
+      dá zavrieť. **Kritérium:** dialóg sa otvorí pri postave; voľba mení stav
+      questu; ≥ 5 pomenovaných postáv v svete.
+- [ ] 10.3 Questy na miestach: ≥ 8 questov, každý ≥ 2 fázy (získať → urobiť →
+      vrátiť sa), aspoň 1 quest alebo interaktivita na každom mieste (kostol,
+      krčma, obchod, úrad, hasiči, škola, ihrisko, žumpa/dom 101); fail/retry.
+      **Kritérium:** `world.quests.length ≥ 8`; `world.quests.locations` pokrýva
+      všetky miesta; fail + retry overený.
+- [ ] 10.4 Odmeny, rešpekt a reťazenie: dokončenie questu mení `player.money`
+      a `player.respect` (nová štatistika); aspoň 1 reťaz (quest B sa odomkne po
+      dokončení A); odmeny sa líšia (peniaze/zbraň/oblečenie/odomknutie).
+      **Kritérium:** `player.respect` rastie za quest; reťaz overená programovo.
+- [ ] 10.5 Vedľajšie misie a zberateľské predmety: SA-style side-misie
+      spustiteľné z ulice (napr. hasiči — hasenie, taxík — odvoz, strážca zákona
+      — naháňačka) s úrovňami a odmenami; ≥ 10 zberateľských predmetov na mape
+      s blipmi po objavení a odmenou za všetky. **Kritérium:** side-misia sa dá
+      spustiť a dokončiť; `world.collectibles` ≥ 10 a zobranie mení počítadlo.
+
+### Fáza 11 — Streľba, zbrane, pickupy
+
+- [ ] 11.1 Mierenie: držanie pravého tlačidla myši prepne aim mód (kamera cez
+      rameno, spomalenie, crosshair), streľba presnejšia; `player.weaponSkill`
+      rastie streľbou a ovplyvňuje spread/cooldown. **Kritérium:**
+      `weapons.state.aiming === true`; crosshair viditeľný; skill rastie.
+- [ ] 11.2 Nové zbrane: brokovnica, AK-47, ostreľovačka (zoom), nôž, granát a
+      molotov; prepínanie 1–0, HUD ikona + munícia. **Kritérium:**
+      `weapons.list.length ≥ 8`; každá zbraň sa dá použiť (fire) a má efekt.
+- [ ] 11.3 Pickupy: plávajúce pickupy zbraní, munície, zdravia a armoru na mape,
+      zobranie mení stav (inventár/health/armor), respawn po ~30 s.
+      **Kritérium:** `world.pickups.length ≥ 6`; zobranie mení stav; respawn.
+- [ ] 11.4 Efekty streľby: tracer, nábojnice, dym, diery po guľkách ostávajú,
+      krv, výbuch granátu/molotova poškodí okolie (NPC/autá), zvuk podľa zbrane.
+      **Kritérium:** efekty majú stav; výbuch zníži `health` v okruhu; zvuky.
+- [ ] 11.5 Drive-by: streľba z auta (aj počas jazdy), zásah NPC/auta z vozidla,
+      zasiahnutý vodič panikuje/vystúpi. **Kritérium:** `weapons.fire()`
+      funguje počas `player.vehicle`; zásah z vozidla mení stav cieľa.
+
+### Fáza 12 — Polícia a vozidlá hlbšie
+
+- [ ] 12.1 Pešia polícia: pri wanted ≥ 2 policajti vystúpia z áut, naháňajú a
+      strieľajú → `player.health` klesá; pri ≥ 4 roadblocky na cestách; zatknutie
+      → pokuta + existujúci BUSTED flow. **Kritérium:** `wanted.units` obsahuje
+      peších; streľba policajtov uberá `player.health`; roadblock existuje.
+- [ ] 12.2 Stratenie polície: keď ťa polícia nevidí (napr. ~30 s mimo dohľad),
+      wanted klesá; spray/lakovacia garáž (nový objekt, napr. pri obchode) zníži
+      level na 0; úplatok (B) existuje. **Kritérium:** skrytie zníži level;
+      spray garáž vynuluje wanted; flow overený programovo.
+- [ ] 12.3 Vozidlá: motorka a bicykel (nové typy s inou fyzikou), carjacking —
+      pri krádeži auta vodič vystúpi a panikuje/utečie; auto pri 0 HP vybuchne
+      (dym existuje). **Kritérium:** `traffic.cars` má typy; carjack flow mení
+      stav vodiča; výbuch auta overený.
+- [ ] 12.4 Dopravná AI: autá spomaľujú/trúbia/obchádzajú hráča aj seba, chodci
+      uskakujú pred autami; policajné auto má sirénu a blikajúce svetlá.
+      **Kritérium:** reakcie áut/chodcov overené; siréna + blikanie stav.
+
+### Fáza 13 — Interiéry, štatistiky, cheaty, rádio
+
+- [ ] 13.1 Interiéry: vstupy do aspoň 4 budov (kostol, krčma, obchod, úrad),
+      interiér scéna s obsahom (NPC/dialóg/minihra), výstup späť pred budovu.
+      **Kritérium:** `world.interiors.length ≥ 4`; vstup/výstup flow overený;
+      každý interiér má aspoň 1 interakciu.
+- [ ] 13.2 Štatistiky hráča: stránka „Štatistiky“ v pause menu — rešpekt, skilly,
+      najazdené/odchodené km, questy, zločiny, peniaze, hviezdy, čas hry;
+      rešpekt rastie za questy/bitky; štatistiky sa ukladajú.
+      **Kritérium:** `player.stats` má ≥ 6 hodnôt; stránka zobrazí živé hodnoty.
+- [ ] 13.3 Cheaty: ≥ 6 kódov (zdravie+armor, zbrane+munícia, spawn auta,
+      počasie, čas, wanted dole, …) zapísaných na klávesnici, HUD potvrdenie
+      „CHEAT“, a oprav starý over-claim F4.3 (plán 1 tvrdí cheat na auto).
+      **Kritérium:** každý cheat má programový efekt; F4.3 overený.
+- [ ] 13.4 Rádio a zvuk hlbšie: ≥ 5 staníc (žánre), DJ hlásenia medzi
+      skladbami a reklamy (procedurálne), sfx podľa zbrane (brokovnica/AK/
+      ostreľovačka znejú inak), motor podľa typu. **Kritérium:**
+      `audio.stations.length ≥ 5`; DJ/reklama stav; rozdielne sfx.
+
+### Fáza 14 — Hustota, výkon, mobil, finále
+
+- [ ] 14.1 Živý svet: viac áut (≥ 40), viac chodcov (≥ 50), zvieratá
+      (sliepky/psy ≥ 10), skupinky NPC (pri krčme, pred kostolom).
+      **Kritérium:** počty rastú; bez regresie starých checkov.
+- [ ] 14.2 Výkon: draw calls ≤ 200 a FPS ≥ 50 (verify meria rAF counter za
+      ~2 s); efekty poolované (žiadne alokácie v ticku). **Kritérium:** verify
+      FPS/draw calls check zelený.
+- [ ] 14.3 Mobil: dotykové ovládanie pre každý nový systém (aim, voľby
+      dialógu, pickupy, interiéry, cheaty); parity test na iPhone emulácii.
+      **Kritérium:** touch flow prejde pre každý systém.
+- [ ] 14.4 Finále: rubrika V2 vyplnená (všetky znaky ≥ 1, ≥ 80 % = 2), README
+      a AGENTS.md aktualizované, finálny report so screenshotmi a zoznamom
+      questov, čo je hotové a čo nie. **Kritérium:** rubrika + README + report.
+
+---
+
+## 4. Rubrika hodnotenia V2 (skóre 0–2 pre každý znak)
+
+Agent na konci každej fázy vyplní tabuľku a uloží ju do sekcie „Progress log“.
+**Done je splnené, keď každý znak je ≥ 1 a aspoň 80 % znakov je 2.**
+
+| # | Znak | 0 | 1 | 2 |
+| --- | --- | --- | --- | --- |
+| B1 | Boj na blízko | len číslo damage | animácie úderov | + combo, knockdown, get-up, dopady |
+| B2 | NPC správanie | chodia po ceste | utekajú pred hráčom | + bránia sa, dialógy, telá, skupinky |
+| B3 | Hráč: zdravie a smrť | health v HUD | zásahy uberajú | + WASTED, respawn, armor, nemocnica |
+| B4 | Questy na miestach | 1–2 markery | questy s fázami | + ≥ 8 miest s questom/interaktivitou |
+| B5 | Dialógy a postavy | žiadne | bubliny nad NPC | + UI s voľbami, quest giveri s menovkou |
+| B6 | Quest log a progres | žiadny | zoznam questov v pauze | + waypoint, fail/retry, odmeny, reťaz |
+| B7 | Streľba | puky bez efektu | mierenie + zásahy | + zbrane, pickupy, drive-by, efekty |
+| B8 | Polícia | autá naháňajú | peší policajti + streľba | + roadblocky, pokuty, spray, hľadanie |
+| B9 | Vozidlá | autá | ukradnutie aj s vodičom | + motorky, bicykle, poškodenie, výbuch |
+| B10 | Interiéry | nie | 1–2 vstupy | + ≥ 4 s obsahom a výstupom |
+| B11 | Štatistiky hráča | peniaze | zdravie/armor | + rešpekt, skilly, stránka v pauze |
+| B12 | Cheaty | nie | 2–3 kódy | + ≥ 6 (zdravie, zbrane, auto, čas, počasie, wanted) |
+| B13 | Rádio a zvuk | ticho | stanice | + DJ, reklamy, sfx podľa zbrane |
+| B14 | Živý svet a výkon | prázdne ulice | viac NPC/áut | + AI reakcie, zvieratá, FPS/draw calls |
+
+---
+
+## 5. Loop protokol (opakuj, kým nie je hotové)
+
+1. Prečítaj tento plán + `AGENTS.md` + `GTA-SA-PLAN.md` (pravidlá, verify recipe).
+2. Urob **audit starých kritérií**: over programovo, či Fáza 0–8 naozaj platí.
+   Známe over-claimy (viď § 2) oprav. Ak nájdeš ďalšie, oprav ich.
+3. Nájdi **prvú neodškrtnutú úlohu** vo fázach 9–14.
+4. Prečítaj relevantné súbory (`src/*.js`, `index.html`, `scripts/verify.cjs`).
+5. Implementuj **najmenšiu** zmenu, ktorá splní akceptačné kritérium. Nový systém
+   vystav na `window.__gregorovce`.
+6. Ak pridávaš čistú logiku → napíš unit test (`src/*.test.js`) a spusti `npm test`.
+7. Rozšír `scripts/verify.cjs` o assertions pre novú úlohu (aspoň 1 check).
+8. Spusti `npm test` a `npm run verify` — všetko zelené, žiadne console errory.
+   Ak čokoľvek padne → **oprav a vráť sa na krok 5**.
+9. Skontroluj rozpočet výkonu (draw calls, FPS) a mobilnú paritu.
+10. Odškrtni úlohu `[x]`, zapíš dôkaz (príkaz/výstup) do „Progress log“.
+11. V odpovedi zhrň: čo pribudlo + dôkaz + stav rubriky + ďalší krok.
+12. Commit `[GTA-SA-2] <fáza> <popis>`.
+13. Screenshoty do `/tmp/opencode` pre človeka (neblokuj loop).
+14. Na konci fázy: vyplň rubriku V2, aktualizuj README/AGENTS.md; ak je
+    `vercel`/`npx vercel` dostupné, nasaď `--prod --yes`.
+15. Ak nie sú všetky úlohy hotové alebo rubrika < prah → vráť sa na krok 2.
+16. Inak: finálny report (čo je hotové, skóre rubriky, čo ostáva mimo rozsah).
+
+**Stop podmienky:** buď sú všetky úlohy fáz 9–14 odškrtnuté a rubrika V2 ≥ prah,
+alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
+
+---
+
+## 6. Mimo rozsah (neimplementovať)
+
+- Multiplayer / online.
+- Fotorealizmus nad PS2 éru (ray tracing, PBR textúry vo vysokom rozlíšení).
+- Celá mapa San Andreas (ostávame Gregorovce).
+- Dabing, licencovaná hudba (rádio je procedurálne).
+- Plnohodnotný ragdoll engine a deštruktívna fyzika budov (gagy stačia ako skript).
+- Nové npm závislosti a externé assety — všetko procedurálne (textúry, zvuky,
+  modely), ako doteraz.
+
+---
+
+## 7. Progress log (agent dopĺňa po každej iterácii)
+
+| Dátum | Fáza/úloha | Dôkaz | Stav |
+| --- | --- | --- | --- |
+| — | — | — | — |
+
+### Rubrika V2 — aktuálne skóre
+
+| B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | B9 | B10 | B11 | B12 | B13 | B14 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
