@@ -232,22 +232,42 @@ priblížila zážitok k SA.
 
 ### Fáza 11 — Streľba, zbrane, pickupy
 
-- [ ] 11.1 Mierenie: držanie pravého tlačidla myši prepne aim mód (kamera cez
+- [x] 11.1 Mierenie: držanie pravého tlačidla myši prepne aim mód (kamera cez
       rameno, spomalenie, crosshair), streľba presnejšia; `player.weaponSkill`
       rastie streľbou a ovplyvňuje spread/cooldown. **Kritérium:**
       `weapons.state.aiming === true`; crosshair viditeľný; skill rastie.
-- [ ] 11.2 Nové zbrane: brokovnica, AK-47, ostreľovačka (zoom), nôž, granát a
+      **Dôkaz:** `PASS F11 aiming raises the gun and the crosshair — aim=true
+      crosshair=true`; `PASS F11 aiming tightens the spread — tighter=true`;
+      `PASS F11 weapon skill grows with shots — grew=true`; kamera cez rameno
+      (offset 0.85 m, vzdialenosť 2.6 m), chôdza pri mierení × 0.45.
+- [x] 11.2 Nové zbrane: brokovnica, AK-47, ostreľovačka (zoom), nôž, granát a
       molotov; prepínanie 1–0, HUD ikona + munícia. **Kritérium:**
       `weapons.list.length ≥ 8`; každá zbraň sa dá použiť (fire) a má efekt.
-- [ ] 11.3 Pickupy: plávajúce pickupy zbraní, munície, zdravia a armoru na mape,
+      **Dôkaz:** `PASS F11 ten weapons all fire — fired=10/10 blasts=2`
+      (päsť, nôž, bejzbal, pištoľ, brokovnica, samopal, AK-47, ostreľovačka,
+      granát, molotov); HUD `#weapon-ammo` (∞ alebo počet), klávesy 1–0, mobilné
+      `ZB`/🎯.
+- [x] 11.3 Pickupy: plávajúce pickupy zbraní, munície, zdravia a armoru na mape,
       zobranie mení stav (inventár/health/armor), respawn po ~30 s.
       **Kritérium:** `world.pickups.length ≥ 6`; zobranie mení stav; respawn.
-- [ ] 11.4 Efekty streľby: tracer, nábojnice, dym, diery po guľkách ostávajú,
+      **Dôkaz:** `PASS F11 >= 6 pickups change state and respawn —
+      pickups=8 healed=true respawn=true`; `PASS F11 weapon pickup hands over
+      the gun — given=true`; 8 pickupov (kostol, obchod, krčma, úrad, škola,
+      ihrisko, hasiči, žumpa) s otáčaním, bobbingom a menovkou.
+- [x] 11.4 Efekty streľby: tracer, nábojnice, dym, diery po guľkách ostávajú,
       krv, výbuch granátu/molotova poškodí okolie (NPC/autá), zvuk podľa zbrane.
       **Kritérium:** efekty majú stav; výbuch zníži `health` v okruhu; zvuky.
-- [ ] 11.5 Drive-by: streľba z auta (aj počas jazdy), zásah NPC/auta z vozidla,
+      **Dôkaz:** `PASS F11 shots leave tracers, casings and bullet holes —
+      tracer=true casing=true decal=true`; `PASS F11 explosion hurts peds and
+      shakes the camera — hurt=true fire=true shake=true`; sfx `shotgun`/`sniper`/
+      `boom`/`pickup` v `audio.js`; diery = InstancedMesh (40, život 45 s).
+- [x] 11.5 Drive-by: streľba z auta (aj počas jazdy), zásah NPC/auta z vozidla,
       zasiahnutý vodič panikuje/vystúpi. **Kritérium:** `weapons.fire()`
       funguje počas `player.vehicle`; zásah z vozidla mení stav cieľa.
+      **Dôkaz:** `PASS F11 drive-by fire works and the driver bails —
+      driveBy=true bail=true`; zásah auta (`hitCar` s `bail: true`) → vodič
+      vyskočí (`bailOut`, nový chodec `flee`, život 14 s) a auto spomalí
+      (`panicTimer`).
 
 ### Fáza 12 — Polícia a vozidlá hlbšie
 
@@ -373,21 +393,23 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | --- | --- | --- | --- |
 | 2026-10-15 | F9.1–9.5 Bitky a živé NPC | `npm test` 14/14; `npm run verify` 42/42 (12 nových F9 checkov); screenshoty `/tmp/opencode/combat-fight.png`, `/tmp/opencode/combat-wasted.png`; commit `[GTA-SA-2] F9 …` | ✅ |
 | 2026-10-15 | F10.1–10.5 Questy, dialógy, interaktivita | `npm test` 20/20 (6 nových testov `quests-core.test.js`); `npm run verify` 57/57 (15 nových F10 checkov); 12 questov, 10 giverov, 9 miest, 3 uličné misie, 10 fliaš; screenshoty `/tmp/opencode/quest-giver.png`, `quest-dialogue.png`, `quest-log.png`; commit `[GTA-SA-2] F10 …` | ✅ |
+| 2026-10-15 | F11.1–11.5 Streľba, zbrane, pickupy | `npm test` 20/20; `npm run verify` 66/66 (9 nových F11 checkov); 10 zbraní (melee 3, strelné 5, projektily 2), mierenie s kamerou cez rameno, 8 pickupov s respawnom, tracery/nábojnice/diery po guľkách, výbuchy, drive-by s vyskakujúcim vodičom; screenshoty `/tmp/opencode/f11-aim.png`, `f11-boom.png`, `f11-pickup.png`; commit `[GTA-SA-2] F11 …` | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 
 | B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | B9 | B10 | B11 | B12 | B13 | B14 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2 | 1 | 2 | 2 | 2 | 2 | 1 | 0 | 0 | 0 | 1 | 0 | 1 | 1 |
+| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 0 | 0 | 0 | 1 | 0 | 1 | 1 |
 
-Poznámky k skóre (po F10): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
+Poznámky k skóre (po F11): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
 bránia + telá; WASTED + respawn + armor + nemocnica). B2 = 1 → bránia sa, telá a
 dialógy máme, chýbajú **skupinky** NPC (F14). B4 = 2 (9 miest s questom alebo
 interaktivitou: kostol, krčma, obchod, úrad, hasiči, škola, ihrisko, žumpa, dom
 101; fail + retry). B5 = 2 (bubliny + UI s voľbami + 10 giverov s menovkou).
-B6 = 2 (quest log, waypoint, fail/retry, odmeny, 2 reťaze). B7 = 1 (4 zbrane, zásahy,
-krv) → mierenie/pickupy/drive-by F11. B8/B9 = 0 → pešia polícia a carjacking F12.
-B10 = 0 → interiéry F13.1. B11 = 1 (peniaze + health/armor + rešpekt) → skilly a
-stránka v pauze F13.2. B12 = 0 → cheaty F13.3. B13 = 1 (3 stanice) →
-DJ/reklámy/sfx podľa zbrane F13.4. B14 = 1 → zvieratá/skupinky/AI reakcie/FPS
-check F14.
+B6 = 2 (quest log, waypoint, fail/retry, odmeny, 2 reťaze). B7 = 2 (10 zbraní,
+mierenie s crosshairom a kamerou cez rameno, zásahy NPC/áut, pickupy, drive-by,
+tracery/nábojnice/diery, výbuchy, zvuk podľa zbrane). B8/B9 = 0 → pešia polícia
+a carjacking F12. B10 = 0 → interiéry F13.1. B11 = 1 (peniaze + health/armor +
+rešpekt) → skilly a stránka v pauze F13.2. B12 = 0 → cheaty F13.3. B13 = 1
+(3 stanice + sfx podľa zbrane) → DJ/reklámy F13.4. B14 = 1 → zvieratá/skupinky/
+AI reakcie/FPS check F14.

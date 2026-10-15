@@ -45,6 +45,8 @@ export class Player {
     this.armor = 0;
     this.money = 350;
     this.respect = 0;
+    this.weaponSkill = 0;
+    this.aiming = false;
     this.wanted = 0;
     this.vehicle = null;
     this.avatar = null;
@@ -262,6 +264,9 @@ export class Player {
     } else {
       this.stamina = Math.min(1, this.stamina + dt * 0.28);
     }
+
+    // Aiming slows the walk to a shuffle, like GTA's shooting stance.
+    if (this.aiming && !this.flying && !this.vehicle) wishSpeed *= 0.45;
 
     const sin = Math.sin(this.yaw);
     const cos = Math.cos(this.yaw);

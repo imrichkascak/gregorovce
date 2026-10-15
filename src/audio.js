@@ -128,6 +128,18 @@ export function createAudio() {
     } else if (kind === 'wasted') {
       note(180, 0.5, 'sawtooth', 0.25);
       setTimeout(() => note(110, 0.8, 'sawtooth', 0.25), 380);
+    } else if (kind === 'shotgun') {
+      noiseBurst({ duration: 0.42, level: 0.55, frequency: 900 });
+      note(80, 0.3, 'square', 0.25);
+    } else if (kind === 'sniper') {
+      noiseBurst({ duration: 0.5, level: 0.5, frequency: 2600 });
+      note(120, 0.45, 'sawtooth', 0.2);
+    } else if (kind === 'boom') {
+      noiseBurst({ duration: 0.85, level: 0.7, frequency: 300 });
+      note(48, 0.7, 'square', 0.3);
+    } else if (kind === 'pickup') {
+      note(880, 0.08, 'triangle', 0.18);
+      setTimeout(() => note(1320, 0.1, 'triangle', 0.18), 90);
     }
   }
 

@@ -18,6 +18,7 @@ import { createVehicles } from './vehicles.js';
 import { createWanted } from './wanted.js';
 import { createMissions } from './missions.js';
 import { createQuests } from './quests.js';
+import { createPickups } from './pickups.js';
 import { createDialogue } from './dialogue.js';
 import { createPostFX } from './postfx.js';
 import { formatClock, formatMoney, stars as starString } from './rules.js';
@@ -72,6 +73,9 @@ const wanted = createWanted({ scene, geo, player, audio });
 const effects = createEffects({ scene });
 const weapons = createWeapons({
   camera,
+  cameraRig,
+  geo,
+  scene,
   player,
   traffic: world.traffic,
   audio,
@@ -110,6 +114,8 @@ quests = createQuests({ scene, geo, player, world, layers, avatar, audio, dialog
 player.quests = quests;
 world.quests = quests;
 world.collectibles = quests.collectibles;
+const pickups = createPickups({ scene, geo, player, weapons, audio, spots: quests.spots });
+world.pickups = pickups.list;
 const postfx = await createPostFX({ renderer, scene, camera });
 
 window.__gregorovce = {
@@ -129,12 +135,14 @@ window.__gregorovce = {
   audio,
   weapons,
   effects,
+  pickups,
   vehicles,
   wanted,
   missions,
   quests,
   dialogue,
   postfx,
+  syncAimHud,
 };
 
 // Spawn on the road nearest the centre of the village, facing that centre.
@@ -185,6 +193,8 @@ const moneyLabel = document.getElementById('money');
 const starsLabel = document.getElementById('stars');
 const weaponSlot = document.getElementById('weapon-slot');
 const weaponIcon = document.getElementById('weapon-icon');
+const weaponAmmo = document.getElementById('weapon-ammo');
+const crosshair = document.getElementById('crosshair');
 const zoneLabel = document.getElementById('zone');
 const missionLabel = document.getElementById('mission-message');
 const healthFill = document.getElementById('health-fill');
@@ -196,6 +206,11 @@ const pauseMenu = document.getElementById('pause-menu');
 const pauseContent = document.getElementById('pause-content');
 
 let hitMarkerTimer = null;
+
+/** Show the crosshair while aiming or right after a shot. */
+function syncAimHud() {
+  crosshair.classList.toggle('on', weapons.state.aiming || weapons.state.shotFlash > 0);
+}
 
 /** Flash the little ✕ at the crosshair when a hit lands. */
 function flashHitMarker() {
@@ -240,10 +255,17 @@ document.addEventListener('keydown', (event) => {
     quests.load();
   }
   if (/^Digit[1-9]$/.test(event.code)) weapons.select(Number(event.code.slice(5)) - 1);
+  if (event.code === 'Digit0') weapons.select(9);
 });
 document.addEventListener('mousedown', (event) => {
-  if (player.locked && event.button === 0) weapons.fire();
+  if (!player.locked) return;
+  if (event.button === 0) weapons.fire();
+  if (event.button === 2) weapons.setAiming(true);
 });
+document.addEventListener('mouseup', (event) => {
+  if (event.button === 2) weapons.setAiming(false);
+});
+document.addEventListener('contextmenu', (event) => event.preventDefault());
 window.addEventListener(
   'wheel',
   (event) => cameraRig.zoom(Math.sign(event.deltaY) * 0.6),
@@ -381,6 +403,7 @@ if (player.touchMode) {
     else vehicles.enter();
   });
   tap('btn-fire', () => weapons.fire());
+  tap('btn-aim', () => weapons.setAiming(!weapons.state.aiming));
   tap('btn-weapon', () => weapons.next());
   tap('btn-talk', () => quests.interact());
 }
@@ -436,6 +459,8 @@ function updateHudStats() {
   starsLabel.style.color = wanted.state.level > 0 ? '#f0c53a' : '#9a9a9a';
   weaponSlot.dataset.weapon = weapons.currentWeapon().name;
   weaponIcon.textContent = weapons.icon();
+  const ammoNow = weapons.ammo();
+  weaponAmmo.textContent = ammoNow === Infinity ? '∞' : String(ammoNow);
   zoneLabel.textContent = 'Gregorovce, Prešov';
   const questMessage = quests.state.messageTimer > 0 ? quests.state.message : '';
   const questObjective = quests.state.objective;
@@ -466,6 +491,8 @@ function tick() {
   wanted.update(dt);
   weapons.update(dt);
   effects.update(dt);
+  pickups.update(dt);
+  syncAimHud();
   missions.update(dt);
   quests.update(dt);
   btnTalk.classList.toggle('hidden', !quests.state.nearGiver || dialogue.state.open);

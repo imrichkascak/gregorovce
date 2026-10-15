@@ -25,12 +25,12 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | Klávesa | Akcia |
 | --- | --- |
 | `W` `A` `S` `D` | chôdza / jazda autom (pohľadom kamery, s rozbehom a zastavením) |
-| myš | rozhľad (3. osoba), `klik` = úder / streľba |
+| myš | rozhľad (3. osoba), `ľavé` = úder / streľba, `pravé` = mierenie (crosshair, kamera cez rameno) |
 | `Shift` | beh, kým vydrží stamina |
 | `Space` | skok (v aute brzda) |
 | `C` | prepni kameru 3. / 1. osoba |
-| `E` | vstúp / vystú z najbližšieho auta |
-| `1`–`4` | prepni zbraň (päsť, bejzbal, pištoľ, samopal) |
+| `E` | vstúp / vystúp z najbližšieho auta |
+| `1`–`0` | prepni zbraň (päsť, nôž, bejzbal, pištoľ, brokovnica, samopal, AK-47, ostreľovačka, granát, molotov) |
 | `V` | prepni počasie (jasno / zamračené / dážď) |
 | `T` | rádio zap/vyp |
 | `B` | úplatok (zníž wanted level) |
@@ -41,15 +41,21 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 
 **Systémy:** viditeľná postava v 3. osobe s animáciami, deň/noc a počasie, rádio,
 jazditeľné autá, zbrane a boj (melee kombo, knockdown, krv), bitky s NPC
-(chuligáni sa bránia), zdravie a armor hráča, WASTED smrť s respawnom v nemocnici,
-wanted level s políciou, misijné markery a obchody, **questy a dialógy** (12 questov,
-10 pomenovaných postáv, quest log v pauze, waypoint na radare, rešpekt, reťaze,
-3 uličné misie, 10 fliaš), save/load, PS2 bloom.
+(chuligáni sa bránia), **10 zbraní** (päsť, nôž, bejzbal, pištoľ, brokovnica,
+samopal, AK-47, ostreľovačka, granát, molotov) s mierením, crosshairom a kamerou
+cez rameno, **efekty streľby** (tracery, nábojnice, diery po guľkách, výbuchy),
+**pickupy** zbraní/munície/zdravia/armoru s respawnom, **drive-by** z auta
+(zasiahnutý vodič vyskočí a utečie), zdravie a armor hráča, WASTED smrť
+s respawnom v nemocnici, wanted level s políciou, misijné markery a obchody,
+**questy a dialógy** (12 questov, 10 pomenovaných postáv, quest log v pauze,
+waypoint na radare, rešpekt, reťaze, 3 uličné misie, 10 fliaš), save/load,
+PS2 bloom.
 
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
-tlačidlá `KAM` (kamera), `E` (auto), `🔫` (úder / streľba), `ZB` (zbraň), `💬`
-(rozhovor), `↑` / `↓` / `FLY` / `R` vpravo dole, `MENU` vľavo hore sa vráti do menu.
+tlačidlá `KAM` (kamera), `E` (auto), `🔫` (úder / streľba), `🎯` (mierenie),
+`ZB` (zbraň), `💬` (rozhovor), `↑` / `↓` / `FLY` / `R` vpravo dole, `MENU`
+vľavo hore sa vráti do menu.
 
 ## Ako to funguje
 
@@ -93,18 +99,21 @@ Klient (`src/`) potom:
 16. `weather.js` — počasie (jasno/zamračené/dážď).
 17. `audio.js` — procedurálny WebAudio: ambient, 3 rádiá, kroky/motor/výstrel.
 18. `combat.js` — čistá logika boja (armor pohltenie, melee kužeľ, combo okno) + unit testy.
-19. `weapons.js` — inventár zbraní, melee údery s combom, streľba, reakcie chodcov/áut.
-20. `effects.js` — poolované častice (krv, dym), 1 draw call na druh.
-21. `quests-core.js` — čistý stavový automat questov (fázy, fail/retry, reťaze) + unit testy.
-22. `dialogue.js` — dialógové okno s číslovanými voľbami (klik/tap/`1`–`9`).
-23. `quests.js` — 12 questov, 10 quest giverov s menovkou a bublinou, quest log,
+19. `weapons.js` — 10 zbraní (melee, strelné, granát/molotov), mierenie, spread,
+    projektily a výbuchy, drive-by.
+20. `effects.js` — poolované častice (krv, dym, oheň, iskry, nábojnice), tracery,
+    diery po guľkách (InstancedMesh), 1 draw call na druh.
+21. `pickups.js` — plávajúce pickupy zbraní/munície/zdravia/armoru s respawnom.
+22. `quests-core.js` — čistý stavový automat questov (fázy, fail/retry, reťaze) + unit testy.
+23. `dialogue.js` — dialógové okno s číslovanými voľbami (klik/tap/`1`–`9`).
+24. `quests.js` — 12 questov, 10 quest giverov s menovkou a bublinou, quest log,
     radar waypoint, rešpekt, 3 uličné misie, 10 fliaš.
-24. `vehicles.js` — vstup do auta a jazda.
-25. `wanted.js` — wanted level a policajná naháňačka.
-26. `missions.js` — misijné markery, obchody, save/load.
-27. `postfx.js` — jemný PS2 bloom (EffectComposer).
-28. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
-29. `main.js` — poskladá scénu, HUD a herný loop.
+25. `vehicles.js` — vstup do auta a jazda.
+26. `wanted.js` — wanted level a policajná naháňačka.
+27. `missions.js` — misijné markery, obchody, save/load.
+28. `postfx.js` — jemný PS2 bloom (EffectComposer).
+29. `rules.js` — čisté herné helpery (hodiny, hviezdy, peniaze) + unit testy.
+30. `main.js` — poskladá scénu, HUD a herný loop.
 
 Všetko je zlúčené do niekoľkých meshov, takže scéna zvládne aj slabší stroj.
 

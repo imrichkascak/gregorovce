@@ -74,7 +74,12 @@ export function createCameraRig(camera, player, colliders) {
     );
 
     let distance = player.vehicle ? Math.max(state.distance, 8) : state.distance;
-    if (state.aim) distance = Math.min(distance, 3);
+    if (state.aim) {
+      // Over-the-shoulder aim camera, GTA style: close in and lean right.
+      distance = Math.min(distance, 2.6);
+      target.x += Math.cos(player.yaw) * 0.85;
+      target.z += -Math.sin(player.yaw) * 0.85;
+    }
     const dirY = player.vehicle ? 0.34 : 0.26;
     desired.set(target.x, target.y + distance * dirY, target.z).addScaledVector(direction, -distance);
 

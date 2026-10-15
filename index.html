@@ -36,7 +36,12 @@
         border: 2px solid rgba(255, 255, 255, 0.85);
         border-radius: 50%;
         pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.1s;
         box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+      }
+      #crosshair.on {
+        opacity: 1;
       }
       #hud {
         position: fixed;
@@ -74,6 +79,7 @@
         gap: 10px;
       }
       #weapon-slot {
+        position: relative;
         width: 46px;
         height: 46px;
         display: grid;
@@ -82,6 +88,15 @@
         border: 2px solid rgba(0, 0, 0, 0.8);
         outline: 1px solid rgba(255, 214, 140, 0.3);
         border-radius: 8px;
+      }
+      #weapon-ammo {
+        position: absolute;
+        right: -8px;
+        bottom: -8px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #ffd21e;
+        text-shadow: 1px 1px 0 #000;
       }
       #clock {
         font-family: "Anton", "Barlow Condensed", sans-serif;
@@ -585,6 +600,7 @@
       <div id="touch-buttons">
         <button id="btn-camera" class="tb">KAM</button>
         <button id="btn-enter" class="tb">E</button>
+        <button id="btn-aim" class="tb">🎯</button>
         <button id="btn-fire" class="tb">🔫</button>
         <button id="btn-talk" class="tb hidden">💬</button>
         <button id="btn-weapon" class="tb">ZB</button>
@@ -598,7 +614,7 @@
       <div id="gta-hud">
         <div id="stars">★★★★★★</div>
         <div id="status-row">
-          <div id="weapon-slot" title="Zbraň"><span id="weapon-icon">✊</span></div>
+          <div id="weapon-slot" title="Zbraň"><span id="weapon-icon">✊</span><span id="weapon-ammo">∞</span></div>
           <div id="clock">--:--</div>
         </div>
         <div id="stamina" title="Stamina"><div id="stamina-fill"></div></div>
@@ -616,7 +632,7 @@
       <div id="mission-message"></div>
       <div id="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> pohyb &nbsp; <kbd>Shift</kbd> beh &nbsp; <kbd>Space</kbd> skok/brzda</div>
-        <div><kbd>C</kbd> kamera &nbsp; <kbd>E</kbd> auto &nbsp; <kbd>F</kbd> rozhovor &nbsp; <kbd>klik</kbd> streľba/úder &nbsp; <kbd>1</kbd>–<kbd>4</kbd> zbraň</div>
+        <div><kbd>C</kbd> kamera &nbsp; <kbd>E</kbd> auto &nbsp; <kbd>F</kbd> rozhovor &nbsp; <kbd>ľavé</kbd> streľba/úder &nbsp; <kbd>pravé</kbd> mierenie &nbsp; <kbd>1</kbd>–<kbd>0</kbd> zbraň</div>
         <div><kbd>V</kbd> počasie &nbsp; <kbd>T</kbd> rádio &nbsp; <kbd>B</kbd> úplatok &nbsp; <kbd>R</kbd> pád &nbsp; <kbd>F5</kbd>/<kbd>F9</kbd> save/load &nbsp; <kbd>Esc</kbd> menu</div>
       </div>
     </div>

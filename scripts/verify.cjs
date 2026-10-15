@@ -161,7 +161,7 @@ async function desktop() {
   const f5 = await page.evaluate(() => {
     const { weapons, player, camera, world } = window.__gregorovce;
     const traffic = world.traffic;
-    weapons.select(2);
+    weapons.select(weapons.list.findIndex((w) => w.id === 'pistol'));
     const weapon = weapons.currentWeapon();
     const ammo0 = weapons.ammo();
     const ped = traffic.peds.find((p) => p.state !== 'dead');
@@ -492,6 +492,135 @@ async function desktop() {
   await page.evaluate(() => document.querySelector('#pause-menu button[data-action="quests"]').click());
   const questPage = await page.evaluate(() => document.getElementById('pause-content').textContent);
   check('F10 pause menu shows the quest log', questPage.includes('Zvony pre kostol'), questPage.slice(0, 70));
+
+  // F11 — aiming, ten weapons, pickups, shooting effects, drive-by
+  const f11 = await page.evaluate(() => {
+    const { player, weapons, world, effects, cameraRig, geo, pickups, syncAimHud } = window.__gregorovce;
+    const traffic = world.traffic;
+    const field = world.quests.spots.ihrisko;
+    const ground = geo.heightAt(field.x, field.z);
+    const result = {};
+
+    // Aiming: the right mouse raises the gun, the camera and the crosshair.
+    weapons.select(weapons.list.findIndex((w) => w.id === 'pistol'));
+    weapons.state.cooldown = 0;
+    weapons.setAiming(true);
+    syncAimHud();
+    result.aiming = weapons.state.aiming === true;
+    result.cameraAim = cameraRig.state.aim === true;
+    result.crosshair = document.getElementById('crosshair').classList.contains('on');
+    const spreadAim = weapons.spread();
+    weapons.setAiming(false);
+    syncAimHud();
+    result.spreadTighter = spreadAim < weapons.spread();
+    const skill0 = player.weaponSkill ?? 0;
+    weapons.state.cooldown = 0;
+    weapons.fire();
+    result.skillGrew = (player.weaponSkill ?? 0) > skill0;
+
+    // Ten weapons, each of them fires and has an effect.
+    let fired = 0;
+    for (let i = 0; i < weapons.list.length; i += 1) {
+      weapons.select(i);
+      const weapon = weapons.currentWeapon();
+      if (weapon.ammo !== Infinity) weapon.ammo = Math.max(weapon.ammo, 2);
+      weapons.state.cooldown = 0;
+      if (weapons.fire()) fired += 1;
+      for (const projectile of weapons.state.projectiles) projectile.timer = 0;
+      weapons.update(0.02);
+    }
+    result.weapons = weapons.list.length;
+    result.fired = fired;
+    result.blasts = weapons.state.blasts;
+
+    // A grenade at a pedestrian's feet hurts them and shakes the camera.
+    const ped = traffic.peds.find((p) => p.state !== 'dead' && !p.temporary);
+    ped.object.position.set(field.x, ground, field.z - 3);
+    ped.health = 100;
+    ped.state = 'walk';
+    weapons.select(weapons.list.findIndex((w) => w.id === 'grenade'));
+    weapons.state.cooldown = 0;
+    weapons.fire();
+    const grenade = weapons.state.projectiles[weapons.state.projectiles.length - 1];
+    grenade.object.position.set(field.x, ground + 0.4, field.z - 3);
+    grenade.timer = 0;
+    cameraRig.state.shake = 0;
+    weapons.update(0.02);
+    result.pedHurt = ped.health < 100;
+    result.explosionEffects = effects.count('fire') > 0;
+    result.shake = cameraRig.state.shake > 0;
+    ped.object.position.set(field.x + 60, ground, field.z + 60);
+
+    // Tracers, shell casings and a bullet hole when nothing is hit.
+    player.position.set(field.x, 400, field.z);
+    player.pitch = 0;
+    player.yaw = 0;
+    for (let i = 0; i < 40; i += 1) cameraRig.update(0.05);
+    weapons.select(weapons.list.findIndex((w) => w.id === 'pistol'));
+    const pistol = weapons.currentWeapon();
+    pistol.ammo = Math.max(pistol.ammo, 2);
+    weapons.state.cooldown = 0;
+    const decals0 = effects.decals.active;
+    weapons.fire();
+    result.tracer = effects.tracers.active > 0;
+    result.casing = effects.count('casing') > 0;
+    result.decal = effects.decals.active > decals0;
+
+    // Pickups: walking over one changes state, it comes back after ~30 s.
+    result.pickups = world.pickups.length;
+    const healthPickup = world.pickups.find((p) => p.kind === 'health');
+    player.health = 40;
+    player.position.set(healthPickup.x, geo.heightAt(healthPickup.x, healthPickup.z), healthPickup.z);
+    pickups.update(0.05);
+    result.healed = player.health > 40;
+    result.pickupHidden = healthPickup.object.visible === false && healthPickup.timer > 25;
+    player.position.set(healthPickup.x + 40, geo.heightAt(healthPickup.x + 40, healthPickup.z), healthPickup.z);
+    pickups.update(31);
+    result.respawned = healthPickup.object.visible === true;
+    const gunPickup = world.pickups.find((p) => p.kind === 'weapon');
+    const gun = weapons.findWeapon(gunPickup.weapon);
+    gun.ammo = 0;
+    player.position.set(gunPickup.x, geo.heightAt(gunPickup.x, gunPickup.z), gunPickup.z);
+    pickups.update(0.05);
+    result.gunGiven = gun.ammo > 0 && weapons.currentWeapon().id === gun.id;
+
+    // Drive-by: fire from behind the wheel; a shot-up car loses its driver.
+    const car = traffic.cars.find((c) => c.state !== 'wrecked');
+    player.vehicle = car;
+    weapons.select(weapons.list.findIndex((w) => w.id === 'pistol'));
+    const ammo0 = weapons.ammo();
+    weapons.state.cooldown = 0;
+    result.driveBy = weapons.fire() === true && weapons.ammo() < ammo0;
+    player.vehicle = null;
+
+    player.position.set(field.x, ground, field.z);
+    player.pitch = 0;
+    player.yaw = 0;
+    car.health = 100;
+    car.state = 'drive';
+    car.panicTimer = 0;
+    car.object.position.set(field.x, geo.heightAt(field.x, field.z - 4) + 0.05, field.z - 4);
+    for (let i = 0; i < 40; i += 1) cameraRig.update(0.05);
+    const peds0 = traffic.peds.length;
+    weapons.state.cooldown = 0;
+    weapons.fire();
+    result.driverBailed = traffic.peds.length > peds0;
+    result.driverFlees =
+      traffic.peds.length > peds0 &&
+      traffic.peds[traffic.peds.length - 1].state === 'flee';
+    result.carPanics = car.panicTimer > 0;
+
+    return result;
+  });
+  check('F11 aiming raises the gun and the crosshair', f11.aiming && f11.cameraAim && f11.crosshair, `aim=${f11.aiming} crosshair=${f11.crosshair}`);
+  check('F11 aiming tightens the spread', f11.spreadTighter, `tighter=${f11.spreadTighter}`);
+  check('F11 weapon skill grows with shots', f11.skillGrew, `grew=${f11.skillGrew}`);
+  check('F11 ten weapons all fire', f11.weapons >= 8 && f11.fired === f11.weapons, `fired=${f11.fired}/${f11.weapons} blasts=${f11.blasts}`);
+  check('F11 explosion hurts peds and shakes the camera', f11.pedHurt && f11.explosionEffects && f11.shake, `hurt=${f11.pedHurt} fire=${f11.explosionEffects} shake=${f11.shake}`);
+  check('F11 shots leave tracers, casings and bullet holes', f11.tracer && f11.casing && f11.decal, `tracer=${f11.tracer} casing=${f11.casing} decal=${f11.decal}`);
+  check('F11 >= 6 pickups change state and respawn', f11.pickups >= 6 && f11.healed && f11.pickupHidden && f11.respawned, `pickups=${f11.pickups} healed=${f11.healed} respawn=${f11.respawned}`);
+  check('F11 weapon pickup hands over the gun', f11.gunGiven, `given=${f11.gunGiven}`);
+  check('F11 drive-by fire works and the driver bails', f11.driveBy && f11.driverBailed && f11.driverFlees && f11.carPanics, `driveBy=${f11.driveBy} bail=${f11.driverBailed}`);
 
   check('no console errors', errors.length === 0, errors.join(' | '));
   await browser.close();

@@ -207,6 +207,46 @@ export function createTraffic(geo, layers) {
     group.add(person);
   }
 
+  /** The driver bails out of a shot-up car and legs it down the road. */
+  function bailOut(car, fromX, fromZ) {
+    const person = buildPedestrian();
+    const cx = car.object.position.x;
+    const cz = car.object.position.z;
+    let awayX = cx - (fromX ?? cx - 1);
+    let awayZ = cz - (fromZ ?? cz);
+    const length = Math.hypot(awayX, awayZ) || 1;
+    awayX /= length;
+    awayZ /= length;
+    const startX = cx - awayX * 1.7;
+    const startZ = cz - awayZ * 1.7;
+    const heading = Math.atan2(awayX, awayZ);
+    const path = [
+      { x: startX, z: startZ, heading, length: 0 },
+      { x: startX + awayX * 18, z: startZ + awayZ * 18, heading, length: 18 },
+    ];
+    person.position.set(startX, geo.heightAt(startX, startZ), startZ);
+    group.add(person);
+    pedestrians.push({
+      object: person,
+      path,
+      distance: 0,
+      speed: 4.6,
+      lateral: 0,
+      phase: 0,
+      direction: 1,
+      health: 100,
+      state: 'flee',
+      aggression: 0.1,
+      hitTimes: [],
+      stateTimer: 0,
+      attackTimer: 0,
+      swingPhase: 0,
+      temporary: true,
+      life: 14,
+    });
+    return true;
+  }
+
   const up = new THREE.Vector3(0, 1, 0);
 
   /** Knockdown / get-up bookkeeping shared by pedestrians. */
@@ -327,13 +367,22 @@ export function createTraffic(geo, layers) {
       }
       return true;
     },
-    /** Damage a car; wrecked cars stop dead. */
-    hitCar(car, damage) {
+    /**
+     * Damage a car; wrecked cars stop dead. When `bail` is set (a drive-by or a
+     * bullet through the bodywork) the driver jumps out and runs away.
+     */
+    hitCar(car, damage, { bail = false, fromX, fromZ } = {}) {
       car.health = Math.max(0, car.health - damage);
       if (car.health <= 0) {
         car.state = 'wrecked';
         car.speed = 0;
+        return true;
       }
+      if (bail) {
+        car.panicTimer = 2.5;
+        bailOut(car, fromX, fromZ);
+      }
+      return true;
     },
     /** Everyone within `radius` of (x, z) runs away; `exclude` is spared. */
     panic(x, z, radius, exclude = null) {
@@ -351,6 +400,11 @@ export function createTraffic(geo, layers) {
       for (const car of cars) {
         if (car.hitCooldown > 0) car.hitCooldown -= dt;
         if (car.state === 'stolen' || car.state === 'wrecked') continue;
+        // A shot-up driver slams the brakes for a moment before driving on.
+        if (car.panicTimer > 0) {
+          car.panicTimer -= dt;
+          continue;
+        }
         car.distance += car.speed * dt;
         if (car.distance > car.path.length) car.distance -= car.path.length;
         const s = samplePath(geo, car.path, car.distance, car.lateral);
@@ -367,7 +421,17 @@ export function createTraffic(geo, layers) {
           }
         }
       }
-      for (const person of pedestrians) {
+      for (let i = pedestrians.length - 1; i >= 0; i -= 1) {
+        const person = pedestrians[i];
+        // Drivers who bailed out clear off after a while.
+        if (person.temporary) {
+          person.life -= dt;
+          if (person.life <= 0) {
+            group.remove(person.object);
+            pedestrians.splice(i, 1);
+            continue;
+          }
+        }
         if (person.state === 'dead') continue;
         if (updateDowned(person, dt)) continue;
         if (person.state === 'stagger') {
