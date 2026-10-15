@@ -281,6 +281,23 @@ function announceStation() {
   showRadioCaption(`📻 ${radio.name} — ${radio.genre}`, 3);
 }
 
+const btnAmbience = document.getElementById('btn-ambience');
+
+/** Tlačidlo 🔊/🔇 ukazuje, či je zvuk zapnutý. */
+function syncSoundButton() {
+  btnAmbience.textContent = audio.isMuted() ? '🔊' : '🔇';
+  btnAmbience.title = audio.isMuted() ? 'Zapnúť zvuk (Z)' : 'Vypnúť zvuk (Z)';
+}
+
+/** Úplné stlmenie zvuku (klávesa Z aj dotykové tlačidlo). */
+function toggleSound() {
+  const muted = audio.toggleMute();
+  syncSoundButton();
+  showRadioCaption(muted ? '🔇 Zvuk je vypnutý — Z ho zapne' : '🔊 Zvuk je zapnutý', 3);
+}
+
+syncSoundButton();
+
 audio.onTalk((event) => showRadioCaption(`${event.kind === 'ad' ? '📢' : '🎙️'} ${event.text}`, 4));
 
 let hitMarkerTimer = null;
@@ -305,6 +322,8 @@ startButton.addEventListener('click', () => {
   audio.resume();
   if (!player.started) player.dropFromSky();
   player.lock();
+  // Hra začína v tichu — hráč sa dozvie, čím si zvuk zapne.
+  if (audio.isMuted()) showRadioCaption('🔇 Zvuk je vypnutý — Z ho zapne, rádio T', 5);
 });
 player.onLockChange = (locked) => {
   overlay.classList.toggle('hidden', locked);
@@ -330,6 +349,7 @@ document.addEventListener('keydown', (event) => {
     announceStation();
   }
   if (event.code === 'KeyM') audio.toggleAmbience();
+  if (event.code === 'KeyZ') toggleSound();
   if (event.code === 'KeyB') wanted.bribe();
   if (event.code === 'F5') {
     missions.save();
@@ -484,7 +504,10 @@ if (player.touchMode) {
     });
   };
   tap('btn-fly', () => player.setFlying(!player.flying));
-  tap('btn-ambience', () => audio.toggleAmbience());
+  tap('btn-ambience', () => {
+    audio.toggleMute();
+    syncSoundButton();
+  });
   tap('btn-menu', () => player.pause());
   tap('btn-r', () => player.respawn());
   tap('btn-camera', () => cameraRig.toggleMode());
@@ -551,6 +574,12 @@ for (const button of document.querySelectorAll('#pause-menu button')) {
         rows.join('') +
         `<button class="cheat-row" data-station="off">${
           audio.isRadioOn() ? 'Vypnúť rádio' : 'Zapnúť rádio'
+        }</button>` +
+        `<button class="cheat-row" data-sound="toggle">${
+          audio.isMuted() ? '🔊 Zapnúť zvuk (Z)' : '🔇 Vypnúť zvuk (Z)'
+        }</button>` +
+        `<button class="cheat-row" data-sound="ambience">${
+          audio.isAmbienceOn() ? 'Vypnúť dedinský tón' : 'Zapnúť dedinský tón (M)'
         }</button>`;
       for (const stationButton of pauseContent.querySelectorAll('[data-station]')) {
         stationButton.addEventListener('click', () => {
@@ -562,6 +591,18 @@ for (const button of document.querySelectorAll('#pause-menu button')) {
             : 'Zapnúť rádio';
         });
       }
+      pauseContent.querySelector('[data-sound="toggle"]').addEventListener('click', () => {
+        toggleSound();
+        const button = pauseContent.querySelector('[data-sound="toggle"]');
+        button.textContent = audio.isMuted() ? '🔊 Zapnúť zvuk (Z)' : '🔇 Vypnúť zvuk (Z)';
+      });
+      pauseContent.querySelector('[data-sound="ambience"]').addEventListener('click', () => {
+        audio.toggleAmbience();
+        const button = pauseContent.querySelector('[data-sound="ambience"]');
+        button.textContent = audio.isAmbienceOn()
+          ? 'Vypnúť dedinský tón'
+          : 'Zapnúť dedinský tón (M)';
+      });
     } else if (action === 'cheats') {
       pauseContent.innerHTML =
         '<b>Cheaty</b><br>Kódy sa píšu na klávesnici (na mobile ťukni na kód):<br>' +

@@ -405,11 +405,33 @@ priblížila zážitok k SA.
       sideways=0.371` (pred opravou bolo znamienko opačné);
       `PASS F4 the car leads with its nose (headlights first) —
       nose=1.000`; `PASS F4 no music plays on its own — radio + ambience
-      off by default`; `npm test` 31/31; `npm run verify` **99/99**;
+      off, master muted by default`; `npm test` 31/31; `npm run verify` **99/99**;
       `#overlay-art` meria presne `1100×780` a `430×900` (celá plocha,
       žiadne pruhy); `favicon.svg` HTTP 200 (`image/svg+xml`),
       `favicon.png` 180×180 (48 % pozadie, 19 % kopec, 10,6 % žlté G,
       1,3 % červená hviezda); `ENGINE-PLAN.md` (plán, nie implementácia).
+- [x] 13.6 Úplné vypnutie zvuku: hra začína v úplnom tichu — master je
+      stlmený (SFX, rádio aj dedinský tón), hráč si zvuk zapne jedným
+      tlačidlom (`Z` / dotykové 🔊) a zapnutie rádia či dedinského tónu
+      ho odtlní.
+      **Kritérium:** `audio.isMuted() === true` a `masterGain() === 0` po
+      štarte; toggle mení gain; `startRadio()` odtlní.
+      **Dôkaz:** `PASS F4 no music plays on its own — radio + ambience
+      off, master muted by default`; `PASS F13 sound toggle mutes and
+      unmutes everything — unmute→gain>0, mute→gain=0, button=🔊`;
+      `PASS F13 switching the radio on unmutes the game — radio start
+      clears the mute`; `npm test` 39/39; `npm run verify` **108/108**.
+      Popis v HUD po štarte `🔇 Zvuk je vypnutý — Z ho zapne, rádio T`
+      (box=253px), po `Z` `🔊 Zvuk je zapnutý`, druhé `Z` ho vypne;
+      dotykové tlačidlo `🔊`/`🔇` (78×62 px, `title` „Zapnúť zvuk (Z)“),
+      v pauze stránka „Rádio“ s tlačidlami „🔊 Zapnúť zvuk (Z)“
+      a „Zapnúť dedinský tón (M)“ (2 tlačidlá zvuku + 7 staníc).
+      `src/audio.js`: `state.muted` (default `true`), `applyMaster()`
+      (gain 0 alebo 0,5), `setMuted`/`toggleMute`/`isMuted`/`masterGain`,
+      `note`/`speak`/`noiseBurst`/`playSfx` early-return keď je stlmené,
+      `startRadio`/`startAmbience` volajú `setMuted(false)`; `src/main.js`:
+      `KeyZ` → `toggleSound`, `syncSoundButton` (🔊/🔇), popis po štarte;
+      `index.html`: hint `Z zvuk`, `title` tlačidla.
 
 ### Fáza 14 — Hustota, výkon, mobil, finále
 
@@ -505,6 +527,7 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | 2026-10-15 | F13.3 Cheaty | `npm test` 31/31 (5 nových testov `cheats.test.js`); `npm run verify` 95/95 (5 nových F13 checkov); 8 kódov (ZDRAVIE, ZBRANE, AUTO, POCASIE, HODINY, POLICIA, PENIAZE, LET) s efektom, HUD toast „CHEAT: …“, dotyková stránka „Cheaty“ v pauze, opravený over-claim F4.3 v `GTA-SA-PLAN.md` | ✅ |
 | 2026-10-15 | F13.5 Opravy podľa spätnej väzby (riadenie, ticho, overlay, favicon, plán) | `npm test` 31/31; `npm run verify` **99/99** (4 nové F4 checky); riadenie: `forward=(sin h, cos h)`, `heading -= steer`, `player.yaw = heading + π` (`along=0.929`, `sideways=0.371`, `nose=1.000`); ticho po štarte (`radio + ambience off by default`, `M`/`🔊` toggle); `#overlay-art` = `cover` (1100×780 aj 430×900 = celá plocha); `favicon.svg` + `favicon.png` (PNG 180×180: 48 % pozadie, 19 % kopec, 10,6 % žltá, 1,3 % červená); `ENGINE-PLAN.md` (len plán) | ✅ |
 | 2026-10-15 | F13.4 Rádio a zvuk hlbšie | `npm test` **39/39** (7 nových testov `radio-core.test.js`, vrátane regresie „posledné hlásenie prežije noty“); `npm run verify` **106/106** (7 nových F13 checkov); 6 staníc so žánrom (`stations=6 genres=6`), DJ hlásenia a reklamy sa striedajú medzi skladbami (`talks=3 kinds=dj+ad`), prepnutie stanice (`Playback FM→K-DST`, klávesa `Q`, dotyková stránka „Rádio“ s `buttons=7`), vlastný zvuk pre každú strelnú zbraň (`guns=5 unique=5`), motor podľa typu (`{"car":"engine-car","moto":"engine-moto","bike":"engine-bike"}`), HUD popis rádia (`box=8288px`); opravená plávajúca‑bodová chyba v checku `hodiny` (tolerancia 0,01 min) | ✅ |
+| 2026-10-15 | F13.6 Úplné vypnutie zvuku | `npm test` 39/39; `npm run verify` **108/108** (2 nové F13 checky, F4 rozšírený o master mute); `state.muted` default `true`, `masterGain()=0` po štarte, `toggleMute` mení gain (0 ↔ 0,5), `startRadio`/`startAmbience` odtlmia, SFX/rádio/DJ early-return keď je stlmené; klávesa `Z` + dotykové tlačidlo `🔊`/`🔇` (78×62 px), HUD popis `🔇 Zvuk je vypnutý — Z ho zapne, rádio T` (box=253px), pauza „Rádio“ s tlačidlami zvuku; screenshoty `/tmp/opencode/mute-start.png`, `mute-on.png`, `mute-pause.png`, `mute-mobile.png` | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 
@@ -534,4 +557,6 @@ lietanie — písané na klávesnici s HUD potvrdením „CHEAT“ a dotykovou s
 rock, gangsta rap, dedinská ľudovka, country, dychovka — DJ hlásenia a reklamy
 medzi skladbami, vlastný zvuk pre každú strelnú zbraň a motor podľa typu vozidla,
 HUD popis rádia, dotyková stránka „Rádio“ v pauze a klávesa `Q`; F13.4).
+F13.6: hra začína s ÚPLNE stlmeným zvukom (master gain 0), `Z`/🔊 ho
+zapne, zapnutie rádia či dedinského tónu ho odtlní.
 B14 = 1 → zvieratá/skupinky/AI reakcie/FPS check F14.

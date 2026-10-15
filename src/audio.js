@@ -80,8 +80,25 @@ export function createAudio() {
   let talkHandler = null;
   let ambience = null;
   const plan = createRadioPlan();
-  // Hra začína v tichu: rádio aj dedinský tón sa zapínajú až na pokyn hráča.
-  const state = { radioOn: false, ambienceOn: false };
+  const MASTER_LEVEL = 0.5;
+  // Hra začína úplne v tichu: master je stlmený, rádio aj dedinský tón sa
+  // zapínajú až na pokyn hráča.
+  const state = { radioOn: false, ambienceOn: false, muted: true };
+
+  function applyMaster() {
+    if (master) master.gain.value = state.muted ? 0 : MASTER_LEVEL;
+  }
+
+  /** Úplné stlmenie celého zvuku (SFX, rádio aj dedinský tón). */
+  function setMuted(flag) {
+    state.muted = !!flag;
+    applyMaster();
+    return state.muted;
+  }
+
+  function toggleMute() {
+    return setMuted(!state.muted);
+  }
 
   function resume() {
     if (!ctx) {
@@ -89,8 +106,9 @@ export function createAudio() {
       if (!AudioCtor) return;
       ctx = new AudioCtor();
       master = ctx.createGain();
-      master.gain.value = 0.5;
+      master.gain.value = MASTER_LEVEL;
       master.connect(ctx.destination);
+      applyMaster();
     }
     if (ctx.state === 'suspended') ctx.resume();
   }
@@ -98,6 +116,7 @@ export function createAudio() {
   /** Dedinský tón (nízky huk) — zapnutý len keď si ho hráč zapne. */
   function startAmbience() {
     if (!ctx || ambience) return;
+    setMuted(false);
     const osc = ctx.createOscillator();
     osc.type = 'sawtooth';
     osc.frequency.value = 52;
@@ -130,7 +149,7 @@ export function createAudio() {
   }
 
   function note(frequency, duration, type = 'triangle', level = 0.25, target = null) {
-    if (!ctx) return;
+    if (!ctx || state.muted) return;
     const osc = ctx.createOscillator();
     osc.type = type;
     osc.frequency.value = frequency;
@@ -146,7 +165,7 @@ export function createAudio() {
 
   /** DJ hovorí: pár krátkych slabík cez bandpass, aby to znelo ako hlásenie. */
   function speak(text) {
-    if (!ctx) return;
+    if (!ctx || state.muted) return;
     const target = radioGain ?? master;
     const syllables = Math.max(3, Math.min(10, Math.round(String(text ?? '').length / 10)));
     const start = ctx.currentTime;
@@ -196,6 +215,7 @@ export function createAudio() {
 
   function startRadio() {
     if (!ctx || state.radioOn) return;
+    setMuted(false);
     radioGain = ctx.createGain();
     radioGain.gain.value = 0.5;
     radioGain.connect(master);
@@ -238,7 +258,7 @@ export function createAudio() {
   }
 
   function noiseBurst({ duration = 0.12, level = 0.3, frequency = 1800, type = 'lowpass' }) {
-    if (!ctx) return;
+    if (!ctx || state.muted) return;
     const frames = Math.floor(ctx.sampleRate * duration);
     const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -255,7 +275,7 @@ export function createAudio() {
   }
 
   function playSfx(kind) {
-    if (!ctx) return;
+    if (!ctx || state.muted) return;
     const profile = SFX[kind] ?? SFX.gunshot;
     for (const burst of profile.noise ?? []) noiseBurst(burst);
     for (const tone of profile.notes ?? []) {
@@ -299,6 +319,10 @@ export function createAudio() {
     stopAmbience,
     toggleAmbience,
     isAmbienceOn: () => state.ambienceOn,
+    setMuted,
+    toggleMute,
+    isMuted: () => state.muted,
+    masterGain: () => (master ? master.gain.value : null),
     playSfx,
   };
 }

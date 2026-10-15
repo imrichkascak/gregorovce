@@ -34,6 +34,7 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | `V` | prepni počasie (jasno / zamračené / dážď) |
 | `T` | rádio zap/vyp (predvolene ticho) |
 | `Q` | ďalšia stanica (6 rádií so žánrom) |
+| `Z` | **úplné vypnutie zvuku** (master mute, predvolene stlmené) |
 | `M` | dedinský tón zap/vyp (predvolene ticho) |
 | `B` | úplatok (zníž wanted level) |
 | `R` | pád zhora na cestu pred kostol |
@@ -42,7 +43,9 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | `Esc` | pauza (menu, questy, štatistiky, cheaty) |
 | písanie kódov | cheaty: `ZDRAVIE`, `ZBRANE`, `AUTO`, `POCASIE`, `HODINY`, `POLICIA`, `PENIAZE`, `LET` |
 
-**Systémy:** viditeľná postava v 3. osobe s animáciami, deň/noc a počasie, **rádio
+**Systémy:** viditeľná postava v 3. osobe s animáciami, deň/noc a počasie, **úplné
+vypnutie zvuku (master mute — hra začína v úplnom tichu, `Z` / `🔊` ho zapne)**,
+**rádio
 (6 staníc so žánrom — Playback FM, K-DST, Radio Los Santos, Rádio Gregorovce,
 Hornád Country, Košický dych — DJ hlásenia a reklamy medzi skladbami, prepínanie
 klávesou `Q` a dotykovou stránkou „Rádio“ v pauze, popis v HUD)**,
@@ -68,7 +71,7 @@ potvrdením „CHEAT: …“ a dotykovou stránkou „Cheaty“ v pauze), save/l
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
 tlačidlá `KAM` (kamera), `E` (auto), `🔫` (úder / streľba), `🎯` (mierenie),
-`ZB` (zbraň), `💬` (rozhovor / vstup do budovy), `↑` / `↓` / `FLY` / `🔊` (dedinský tón) / `R` vpravo dole, `MENU`
+`ZB` (zbraň), `💬` (rozhovor / vstup do budovy), `↑` / `↓` / `FLY` / `🔊` (zvuk zap/vyp) / `R` vpravo dole, `MENU`
 vľavo hore sa vráti do menu. V pauze je aj stránka **„Rádio“** s tlačidlom pre každú
 stanicu (a zapnutím/vypnutím rádia), takže sa stanice dajú prepínať aj na mobile.
 
@@ -114,10 +117,12 @@ Klient (`src/`) potom:
 14. `radar.js` — otáčavý radar s blipmi POI, severkou a zónou.
 15. `daynight.js` — cyklus dňa/noci, slnko a pouličné svetlá.
 16. `weather.js` — počasie (jasno/zamračené/dážď).
-17. `audio.js` — procedurálny WebAudio: dedinský tón (predvolene vypnutý, `M`),
+17. `audio.js` — procedurálny WebAudio: **hra začína s úplne stlmeným zvukom**
+    (`Z` / tlačidlo `🔊` zapne celý zvuk, zapnutie rádia či dedinského tónu ho
+    odtlní), dedinský tón (`M`),
     **6 rádií** (Playback FM, K-DST, Radio Los Santos, Rádio Gregorovce, Hornád
     Country, Košický dych) s DJ hláseniami a reklamami medzi skladbami, vlastný
-    zvuk pre každú strelnú zbraň a motor podľa typu vozidla — hra začína v tichu.
+    zvuk pre každú strelnú zbraň a motor podľa typu vozidla.
 18. `radio-core.js` — čistá logika rádia (stanice so žánrom, plán beatov, DJ
     hlásenia a reklamy, prepínanie staníc) + unit testy.
 19. `combat.js` — čistá logika boja (armor pohltenie, melee kužeľ, combo okno) + unit testy.

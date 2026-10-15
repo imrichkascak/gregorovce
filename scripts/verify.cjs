@@ -204,8 +204,13 @@ async function desktop() {
   );
   check('F4 no music plays on its own', await page.evaluate(() => {
     const { audio } = window.__gregorovce;
-    return audio.isRadioOn() === false && audio.isAmbienceOn() === false;
-  }), 'radio + ambience off by default');
+    return (
+      audio.isRadioOn() === false &&
+      audio.isAmbienceOn() === false &&
+      audio.isMuted() === true &&
+      audio.masterGain() === 0
+    );
+  }), 'radio + ambience off, master muted by default');
 
   // F5 — weapons select + fire + ped reaction
   const f5 = await page.evaluate(() => {
@@ -1114,6 +1119,31 @@ async function desktop() {
     radioPage.captionShown && radioPage.captionBox > 0 && radioPage.caption.includes(radioPage.name),
     `${radioPage.caption} box=${radioPage.captionBox}px`,
   );
+
+  // Úplné stlmenie zvuku (klávesa Z / tlačidlo 🔊). Predvolené ticho
+  // kontroluje F4 check vyššie (rádio sa medzitým už zapínalo).
+  const sound = await page.evaluate(() => {
+    const { audio } = window.__gregorovce;
+    const result = {};
+    audio.setMuted(true);
+    // Zapnutie rádia hráča odtlmenie zruší (aby bolo počuť, čo si zapol).
+    audio.startRadio();
+    result.radioUnmutes = audio.isMuted() === false && audio.masterGain() > 0;
+    audio.stopRadio();
+    // Rádio hru odtlmenilo — nastav známy stav a over oba smery.
+    audio.setMuted(true);
+    result.toggledBack = audio.toggleMute() === false && audio.masterGain() > 0;
+    audio.toggleMute();
+    result.mutedAgain = audio.isMuted() === true && audio.masterGain() === 0;
+    result.button = document.getElementById('btn-ambience').textContent;
+    return result;
+  });
+  check(
+    'F13 sound toggle mutes and unmutes everything',
+    sound.toggledBack && sound.mutedAgain,
+    `unmute→gain>0, mute→gain=0, button=${sound.button}`,
+  );
+  check('F13 switching the radio on unmutes the game', sound.radioUnmutes, 'radio start clears the mute');
 
   check('no console errors', errors.length === 0, errors.join(' | '));
   await browser.close();
