@@ -444,7 +444,7 @@ priblížila zážitok k SA.
 - [x] 14.3 Mobil: dotykové ovládanie pre každý nový systém (aim, voľby
       dialógu, pickupy, interiéry, cheaty); parity test na iPhone emulácii.
       **Kritérium:** touch flow prejde pre každý systém.
-- [ ] 14.4 Finále: rubrika V2 vyplnená (všetky znaky ≥ 1, ≥ 80 % = 2), README
+- [x] 14.4 Finále: rubrika V2 vyplnená (všetky znaky ≥ 1, ≥ 80 % = 2), README
       a AGENTS.md aktualizované, finálny report so screenshotmi a zoznamom
       questov, čo je hotové a čo nie. **Kritérium:** rubrika + README + report.
 
@@ -531,16 +531,19 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | 2026-10-18 | F14.1 Živý svet (hustota) | `npm test` **44/44** (5 nových testov `animals-core.test.js`); `npm run verify` **115/115** (4 nové F14.1 checky); prepísaný `src/traffic.js` (autá v 2 instancovaných meshcoch, chodci v 6 InstancedMesh, skupinky NPC); nové `src/animals.js` + `src/animals-core.js` (12 zvierat: `{"chicken":6,"dog":6}`); `cars=48 peds=61` (predtým 24/34); skupinky `krčma=3 chat kostol=3 chat`; screenshoty `/tmp/opencode/f14-village.png`, `f14-church.png`, `f14-pub.png` | ✅ |
 | 2026-10-18 | F14.2 Výkon (draw calls, FPS, pooling) | `npm test` 44/44; `npm run verify` **115/115** (3 nové F14.2 checky); dedina `max=164` draw callov (rozpočet ≤ 200) a `fps=58.7` cez rAF counter za 4 s (verify launch dostal `--use-angle=metal`, bez GPU bolo ~3 FPS); efekty poolované (`particles=48 positions=144`); gags: neviditeľné sprity sa už nekreslia (11 callov menej) | ✅ |
 | 2026-10-18 | F14.3 Mobil (dotyková parita) | `npm test` 44/44; `npm run verify` **121/121** (6 nových F14.3 checkov na iPhone 14 emulácii); aim (`aiming=true`), dialóg s voľbami (`choices=2`) + ťuknuteľná voľba, pickup (`healed=true`), interiér (`inside=kostol`), cheaty (`rows=8 money=350→10350 toast=CHEAT: +10 000 €`); **našiel a opravil reálny mobilný bug**: `#dialogue` mal `z-index: 5` ako `#touch-layer` a bol skôr v DOM → voľby dialógu sa na mobile nedali ťuknúť; screenshot `/tmp/opencode/verify-mobile-f14.png` | ✅ |
+| 2026-10-18 | F14.4 Finále (rubrika V2, README, report) | `npm test` 44/44; `npm run verify` **121/121**; rubrika V2 vyplnená — **všetkých 14 znakov = 2 (100 %**, prah ≥ 80 % splnený), B2 a B14 sa posunuli z 1 na 2; `README.md` doplnený (živý svet, výkon, dotyková parita, overenie 121 checkov); `FINAL-REPORT.md` — čo je hotové, zoznam 12 questov + 10 giverov + 3 uličné misie + 10 fliaš, výkonová tabuľka po miestach, čo ostáva mimo rozsah; `AGENTS.md` **neaktualizovaný** (chránený súbor — zápis čaká na schválenie človeka); deploy na Vercel sa nespustil (`vercel` v prostredí nie je, plán ho má ako podmienený krok) | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 
 | B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | B9 | B10 | B11 | B12 | B13 | B14 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2 | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 1 |
+| 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
 
-Poznámky k skóre (po F12): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
-bránia + telá; WASTED + respawn + armor + nemocnica). B2 = 1 → bránia sa, telá a
-dialógy máme, chýbajú **skupinky** NPC (F14). B4 = 2 (9 miest s questom alebo
+Poznámky k skóre (po F14): B1–B3 = 2 (animácie + combo/knockdown/get-up; NPC sa
+bránia + telá + **skupinky**; WASTED + respawn + armor + nemocnica). B2 = 2
+(chuligáni sa bránia, telá ostávajú, dialógy, a od F14 **skupinky NPC** — pri
+krčme chuligáni, pred kostolom babky — plus zvieratá a ich túlanie; F14.1).
+B4 = 2 (9 miest s questom alebo
 interaktivitou: kostol, krčma, obchod, úrad, hasiči, škola, ihrisko, žumpa, dom
 101; fail + retry). B5 = 2 (bubliny + UI s voľbami + 10 giverov s menovkou).
 B6 = 2 (quest log, waypoint, fail/retry, odmeny, 2 reťaze). B7 = 2 (10 zbraní,
@@ -562,4 +565,7 @@ medzi skladbami, vlastný zvuk pre každú strelnú zbraň a motor podľa typu v
 HUD popis rádia, dotyková stránka „Rádio“ v pauze a klávesa `Q`; F13.4).
 F13.6: hra začína s ÚPLNE stlmeným zvukom (master gain 0), `Z`/🔊 ho
 zapne, zapnutie rádia či dedinského tónu ho odtlní.
-B14 = 1 → zvieratá/skupinky/AI reakcie/FPS check F14.
+B14 = 2 (F14: 48 áut a 61 chodcov v dedine, 12 zvierat — sliepky a psy —
+skupinky NPC, autá spomaľujú a trúbia pred hráčom, chodci uskakujú, telá
+ostávajú; draw calls v dedine ≤ 200 (`max=164`) a FPS ≥ 50 (`fps=58.7`) merané
+verify checkom, efekty poolované; dotyková parita všetkých systémov).

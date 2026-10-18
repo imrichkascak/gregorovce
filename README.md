@@ -66,7 +66,12 @@ cez `F` pri budove, vlastná miestnosť s NPC a interakciou, výstup späť von)
 zločiny, hviezdy, zatknutia, smrti, autá, zárobok/útrata — stránka v pauze so
 živými hodnotami), **cheaty** (8 kódov písaných na klávesnici — `ZDRAVIE`,
 `ZBRANE`, `AUTO`, `POCASIE`, `HODINY`, `POLICIA`, `PENIAZE`, `LET` — s HUD
-potvrdením „CHEAT: …“ a dotykovou stránkou „Cheaty“ v pauze), save/load, PS2 bloom.
+potvrdením „CHEAT: …“ a dotykovou stránkou „Cheaty“ v pauze), **živý svet**
+(48 áut a 61 chodcov v dedine, **12 zvierat — sliepky a psy**, ktoré sa túlajú
+okolo kotiev, a **skupinky NPC** — chuligáni pri krčme, babky pred kostolom —
+s vlastnou animáciou), **výkon** (draw calls v dedine pod 200 a FPS ≥ 50 aj s touto
+hustotou: autá, chodci a zvieratá sú zlúčené či inštancované, efekty poolované),
+save/load, PS2 bloom.
 
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
 plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
@@ -74,6 +79,9 @@ tlačidlá `KAM` (kamera), `E` (auto), `🔫` (úder / streľba), `🎯` (mieren
 `ZB` (zbraň), `💬` (rozhovor / vstup do budovy), `↑` / `↓` / `FLY` / `🔊` (zvuk zap/vyp) / `R` vpravo dole, `MENU`
 vľavo hore sa vráti do menu. V pauze je aj stránka **„Rádio“** s tlačidlom pre každú
 stanicu (a zapnutím/vypnutím rádia), takže sa stanice dajú prepínať aj na mobile.
+Dotyková parita je overená pre **každý systém** — mierenie, voľby dialógu, pickupy,
+interiéry aj cheaty (verify beží na emulácii iPhone 14); voľby dialógu sú kvôli tomu
+nad dotykovou vrstvou (`z-index: 6`), inak by sa na mobile nedali ťuknúť.
 
 ## Ako to funguje
 
@@ -104,7 +112,15 @@ Klient (`src/`) potom:
 6. `traffic.js` — nízko-polygónové autá, motorky a bicykle, ktoré sa pohybujú po
    cestách (spomaľujú a trúbia pred hráčom, chodci uskakujú), chodci reagujú na
    útoky (stagger, knockdown, vstanú), chuligáni sa bijú, autá zrážajú hráča a
-   pri 0 HP vybuchnú.
+   pri 0 HP vybuchnú. Hustota je sústredená do dediny (48 áut, 61 chodcov) a
+   vizuál je **inštancovaný** — autá kreslia dva spoločné meshe (karoséria s
+   `instanceColor` + svetlá), chodci šesť (`InstancedMesh` po dieloch: torso,
+   hlava, nohy, ruky), takže celá doprava stojí pár draw callov. Skupinky NPC
+   stoja v kruhu pri krčme (chuligáni) a pred kostolom (babky) a debatia;
+   `animals.js` (+ `animals-core.js` s unit testami) pridáva **12 zvierat** —
+   sliepky pri žumpe a kostole, psy pri obchode, krčme, škole, hasičoch, ihrisku
+   a úrade — ako zlúčené low-poly meshe s vertex colors, ktoré sa túlajú okolo
+   svojej kotvy.
 7. `gags.js` — dedinské scény v slučke: výbuch domu 101, Paly pridržiava Banana
    pred kostolom kým ho prejde auto, žumpa z bytovky 217 cez cestu do jarku.
 8. `labels.js` — plávajúce menovky (kostol, obchod, krčma, obecný úrad…).
@@ -165,9 +181,20 @@ a go/no-go kritériá pre prípadný Godot spike.
 ## Overenie
 
 ```bash
-npm test        # unit testy (motion, rules, combat, quests-core, stats, cheats, radio-core)
+npm test        # unit testy (motion, rules, combat, quests-core, stats, cheats, radio-core, animals-core)
 npm run verify  # server + Playwright assertions pre všetky fázy (GTA-SA-PLAN.md, GTA-SA-PLAN-2.md)
 ```
+
+`npm run verify` prejde všetkých **121 checkov** (F0–F14) — od sveta a ovládania cez
+questy, interiéry, cheaty a rádio až po hustotu sveta a výkon: dedina má 48 áut a
+61 chodcov, 12 zvierat a dve skupinky NPC, drží sa pod 200 draw callov
+(`max=164`) a nad 50 FPS (`fps≈59`, merané rAF counterom za 4 s). Na macOS sa
+headless Chromium spúšťa s `--use-angle=metal`, inak renderuje softvérovo (~3 FPS) a
+FPS check by nemal zmysel. Dotyková časť beží na emulácii iPhone 14 a overuje
+paritu pre mierenie, dialóg, pickupy, interiéry a cheaty.
+
+Záverečný prehľad (čo je hotové, rubrika V2, zoznam questov, čo ostáva mimo
+rozsah) je v `FINAL-REPORT.md`.
 
 ## Licencie a atribúcia
 
