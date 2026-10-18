@@ -448,6 +448,22 @@ priblížila zážitok k SA.
       a AGENTS.md aktualizované, finálny report so screenshotmi a zoznamom
       questov, čo je hotové a čo nie. **Kritérium:** rubrika + README + report.
 
+### Fáza 15 — Doladenie po finále (HUD, mobil, terč)
+
+- [x] 15.1 HUD: instrukcie s pohybom a najintuitívnejšie veci (WASD, Shift,
+      Space, C, ľavé/pravé tlačidlo) preč; `#keys` je jeden krátky riadok
+      s neintuitívnymi klávesmi. **Kritérium:** inštrukcie nezakrývajú hru.
+- [x] 15.2 Mobil: hra je hrateľná na telefóne (portrét aj na šírku) — radar
+      124 → 92 px, `#info`/`#zone` skryté, HUD zmenšený, tlačidlá v mriežke
+      3×3 (174×150 namiesto 166×412), `🔊` skryté (je v pauze), ťahanie
+      rozhľadu citlivejšie (2,4×). **Kritérium:** stred obrazovky je voľný.
+- [x] 15.3 Terč a mierenie: so zbraňou v ruke je crosshair vidno stále
+      (predtým len pri mierení), pri mierení sa zúži a zožltne; rozptyl sa
+      počíta v rovine kolmej na smer pohľadu; držanie 🔫 strieľa opakovane.
+      **Kritérium:** streľba nie je „random“ — terč sedí na cieli.
+- [x] 15.4 Commit a push (Vercel sa nasadí automaticky).
+      **Kritérium:** `npm test` + `npm run verify` zelené, strom čistý.
+
 ---
 
 ## 4. Rubrika hodnotenia V2 (skóre 0–2 pre každý znak)
@@ -532,6 +548,7 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | 2026-10-18 | F14.2 Výkon (draw calls, FPS, pooling) | `npm test` 44/44; `npm run verify` **115/115** (3 nové F14.2 checky); dedina `max=164` draw callov (rozpočet ≤ 200) a `fps=58.7` cez rAF counter za 4 s (verify launch dostal `--use-angle=metal`, bez GPU bolo ~3 FPS); efekty poolované (`particles=48 positions=144`); gags: neviditeľné sprity sa už nekreslia (11 callov menej) | ✅ |
 | 2026-10-18 | F14.3 Mobil (dotyková parita) | `npm test` 44/44; `npm run verify` **121/121** (6 nových F14.3 checkov na iPhone 14 emulácii); aim (`aiming=true`), dialóg s voľbami (`choices=2`) + ťuknuteľná voľba, pickup (`healed=true`), interiér (`inside=kostol`), cheaty (`rows=8 money=350→10350 toast=CHEAT: +10 000 €`); **našiel a opravil reálny mobilný bug**: `#dialogue` mal `z-index: 5` ako `#touch-layer` a bol skôr v DOM → voľby dialógu sa na mobile nedali ťuknúť; screenshot `/tmp/opencode/verify-mobile-f14.png` | ✅ |
 | 2026-10-18 | F14.4 Finále (rubrika V2, README, report) | `npm test` 44/44; `npm run verify` **121/121**; rubrika V2 vyplnená — **všetkých 14 znakov = 2 (100 %**, prah ≥ 80 % splnený), B2 a B14 sa posunuli z 1 na 2; `README.md` doplnený (živý svet, výkon, dotyková parita, overenie 121 checkov); `FINAL-REPORT.md` — čo je hotové, zoznam 12 questov + 10 giverov + 3 uličné misie + 10 fliaš, výkonová tabuľka po miestach, čo ostáva mimo rozsah; `AGENTS.md` **neaktualizovaný** (chránený súbor — zápis čaká na schválenie človeka); deploy na Vercel sa nespustil (`vercel` v prostredí nie je, plán ho má ako podmienený krok) | ✅ |
+| 2026-10-18 | F15.1–15.4 Doladenie (HUD, mobil, terč) | `npm test` 44/44; `npm run verify` **121/121**; **HUD**: `#keys` z 3 riadkov na 1 (pohyb/myš/kamera preč — `keysLines=1`, box 1109×48 namiesto ~1109×98); **mobil**: radar 124 → 92 px, `#info`/`#zone` skryté (`display=none`), HUD zmenšený (hviezdy 15 px, peňaženka 19 px, bary 104×10), tlačidlá v mriežke 3×3 `174×150` (predtým 2×6 `166×412` — 7,9 % obrazovky namiesto 20,8 %), `🔊` skryté (zvuk je v pauze), ťahanie rozhľadu 1,7× → 2,4×, `💬` si drží bunku (`visibility: hidden`), na šírku ide radar doľava dole; **terč**: so zbraňou v ruke je crosshair vidno **stále** (`crosshair="on"`, predtým len pri mierení), pri mierení sa zúži a zožltne (`on aim`), rozptyl sa počíta v rovine kolmej na smer pohľadu (`scatterRight`/`scatterUp`), držanie `🔫` strieľa opakovane (`fireHeld` v ticku); opravená regresia — `fireHeld` bol deklarovaný vnútri touch bloku, takže `tick()` na desktope hádzal `ReferenceError` a slučka zamrzla (F3/F9 padali); screenshoty `/tmp/opencode/mobile-portrait.png`, `mobile-landscape.png`, `desktop-crosshair.png` | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 

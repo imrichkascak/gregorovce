@@ -44,6 +44,9 @@ export function createWeapons({
   const muzzle = new THREE.Vector3();
   const impact = new THREE.Vector3();
   const aimPoint = new THREE.Vector3();
+  const scatterRight = new THREE.Vector3();
+  const scatterUp = new THREE.Vector3();
+  const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
   const grenadeMesh = new THREE.Mesh(
     new THREE.SphereGeometry(0.16, 8, 6),
@@ -208,9 +211,11 @@ export function createWeapons({
     aimFrom();
     const jitter = spread();
     if (jitter > 0) {
-      direction.x += (Math.random() - 0.5) * jitter * 2;
-      direction.y += (Math.random() - 0.5) * jitter * 2;
-      direction.z += (Math.random() - 0.5) * jitter * 2;
+      // Rozptyl v rovine kolmej na smer pohľadu — terč tak sedí pri každom sklone.
+      scatterRight.crossVectors(direction, WORLD_UP).normalize();
+      scatterUp.crossVectors(scatterRight, direction).normalize();
+      direction.addScaledVector(scatterRight, (Math.random() - 0.5) * jitter * 2);
+      direction.addScaledVector(scatterUp, (Math.random() - 0.5) * jitter * 2);
       direction.normalize();
     }
 

@@ -306,9 +306,16 @@ audio.onTalk((event) => showRadioCaption(`${event.kind === 'ad' ? '📢' : '🎙
 
 let hitMarkerTimer = null;
 
-/** Show the crosshair while aiming or right after a shot. */
+// Držanie 🔫 na mobile opakuje streľbu (nastavuje ho touch vrstva).
+let fireHeld = false;
+
+/** Terc: so zbraňou v ruke je vidno stále (aj pri hode), pri mierení sa zúži a zožltne. */
 function syncAimHud() {
-  crosshair.classList.toggle('on', weapons.state.aiming || weapons.state.shotFlash > 0);
+  const weapon = weapons.currentWeapon();
+  const aimed = Boolean(weapon && !weapon.melee);
+  const playing = player.started && !player.dead;
+  crosshair.classList.toggle('on', playing && (aimed || weapons.state.aiming || weapons.state.shotFlash > 0));
+  crosshair.classList.toggle('aim', weapons.state.aiming);
 }
 
 /** Flash the little ✕ at the crosshair when a hit lands. */
@@ -447,7 +454,8 @@ if (player.touchMode) {
       player.touchMove.x = jx;
       player.touchMove.y = jy;
     } else if (event.pointerId === lookId && lookLast) {
-      const sens = player.sensitivity * 1.7;
+      // Na mobile je potrebná vyššia citlivosť — palcom sa nedá ťahať ako myšou.
+      const sens = player.sensitivity * 2.4;
       player.yaw -= (event.clientX - lookLast.x) * sens;
       player.pitch = THREE.MathUtils.clamp(
         player.pitch - (event.clientY - lookLast.y) * sens,
@@ -520,6 +528,17 @@ if (player.touchMode) {
     else vehicles.enter();
   });
   tap('btn-fire', () => weapons.fire());
+  // Držanie 🔫 strieľa opakovane — na mobile sa nedá stláčať a ťahať zároveň.
+  const fireButton = document.getElementById('btn-fire');
+  fireButton.addEventListener('pointerdown', (event) => {
+    event.stopPropagation();
+    fireHeld = true;
+  });
+  for (const done of ['pointerup', 'pointercancel', 'pointerleave']) {
+    fireButton.addEventListener(done, () => {
+      fireHeld = false;
+    });
+  }
   tap('btn-aim', () => weapons.setAiming(!weapons.state.aiming));
   tap('btn-weapon', () => weapons.next());
   tap('btn-talk', () => {
@@ -669,6 +688,7 @@ function tick() {
   weather.update(dt, player.position);
   wanted.update(dt);
   weapons.update(dt);
+  if (fireHeld) weapons.fire();
   effects.update(dt);
   pickups.update(dt);
   animals.update(dt);

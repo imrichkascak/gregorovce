@@ -25,7 +25,7 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | Klávesa | Akcia |
 | --- | --- |
 | `W` `A` `S` `D` | chôdza / jazda autom v smere kamery (vpravo = vpravo, svetlá napred) |
-| myš | rozhľad (3. osoba), `ľavé` = úder / streľba, `pravé` = mierenie (crosshair, kamera cez rameno) |
+| myš | rozhľad (3. osoba), `ľavé` = úder / streľba, `pravé` = mierenie (kamera cez rameno); terč je vidno vždy, keď máš v ruke zbraň |
 | `Shift` | beh, kým vydrží stamina |
 | `Space` | skok (v aute brzda) |
 | `C` | prepni kameru 3. / 1. osoba |
@@ -74,10 +74,15 @@ hustotou: autá, chodci a zvieratá sú zlúčené či inštancované, efekty po
 save/load, PS2 bloom.
 
 **Mobil / dotykové zariadenia:** hra sa spustí bez pointer locku — vľavo sa
-plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš,
-tlačidlá `KAM` (kamera), `E` (auto), `🔫` (úder / streľba), `🎯` (mierenie),
-`ZB` (zbraň), `💬` (rozhovor / vstup do budovy), `↑` / `↓` / `FLY` / `🔊` (zvuk zap/vyp) / `R` vpravo dole, `MENU`
-vľavo hore sa vráti do menu. V pauze je aj stránka **„Rádio“** s tlačidlom pre každú
+plávajúcim joystickom pohybuješ, ťahaním po pravej časti obrazovky sa rozhliadaš
+(na mobile je ťahanie citlivejšie, 2,4×), `MENU` vľavo hore sa vráti do menu.
+Tlačidlá sú vpravo dole v mriežke **3×3** (174×150 px): `KAM` (kamera), `E` (auto),
+`ZB` (zbraň), `🎯` (mierenie), `↑` (skok), `R` (respawn), `FLY` (let), `💬` (rozhovor /
+vstup do budovy) a `🔫` (úder / streľba — držaním strieľa opakovane). Zvuk sa na mobile
+prepína v pauze na stránke **„Rádio“**, preto tlačidlo `🔊` na mobile nie je.
+HUD je na mobile zmenšený, aby bolo vidno hru: radar má 92 px, `#info` (súradnice)
+a `#zone` sú skryté a čísla v HUD-e sú menšie.
+V pauze je aj stránka **„Rádio“** s tlačidlom pre každú
 stanicu (a zapnutím/vypnutím rádia), takže sa stanice dajú prepínať aj na mobile.
 Dotyková parita je overená pre **každý systém** — mierenie, voľby dialógu, pickupy,
 interiéry aj cheaty (verify beží na emulácii iPhone 14); voľby dialógu sú kvôli tomu
@@ -142,8 +147,9 @@ Klient (`src/`) potom:
 18. `radio-core.js` — čistá logika rádia (stanice so žánrom, plán beatov, DJ
     hlásenia a reklamy, prepínanie staníc) + unit testy.
 19. `combat.js` — čistá logika boja (armor pohltenie, melee kužeľ, combo okno) + unit testy.
-20. `weapons.js` — 10 zbraní (melee, strelné, granát/molotov), mierenie, spread,
-    projektily a výbuchy, drive-by, vlastný zvuk pre každú strelnú zbraň.
+20. `weapons.js` — 10 zbraní (melee, strelné, granát/molotov), mierenie,
+    rozptyl v rovine terča (vždy vidno, pri mierení zúžený), projektily a výbuchy,
+    drive-by, vlastný zvuk pre každú strelnú zbraň.
 21. `effects.js` — poolované častice (krv, dym, oheň, iskry, nábojnice), tracery,
     diery po guľkách (InstancedMesh), 1 draw call na druh.
 22. `pickups.js` — plávajúce pickupy zbraní/munície/zdravia/armoru s respawnom.

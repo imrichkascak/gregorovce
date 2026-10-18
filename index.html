@@ -29,22 +29,30 @@
       canvas {
         display: block;
       }
+      /* Terc: so zbraňou v ruke je vidno stále, pri mierení sa zúži a zožltne. */
       #crosshair {
         position: fixed;
         left: 50%;
         top: 50%;
-        width: 8px;
-        height: 8px;
-        margin: -4px 0 0 -4px;
-        border: 2px solid rgba(255, 255, 255, 0.85);
+        width: 10px;
+        height: 10px;
+        margin: -5px 0 0 -5px;
+        border: 2px solid rgba(255, 255, 255, 0.9);
         border-radius: 50%;
         pointer-events: none;
         opacity: 0;
-        transition: opacity 0.1s;
+        transition: opacity 0.1s, width 0.1s, height 0.1s, margin 0.1s;
         box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
       }
       #crosshair.on {
         opacity: 1;
+      }
+      #crosshair.aim {
+        width: 6px;
+        height: 6px;
+        margin: -3px 0 0 -3px;
+        border-color: #ffd21e;
+        box-shadow: 0 0 6px rgba(0, 0, 0, 0.75), 0 0 10px rgba(255, 210, 30, 0.4);
       }
       #hud {
         position: fixed;
@@ -324,9 +332,9 @@
         border: 1px solid rgba(0, 0, 0, 0.55);
         outline: 1px solid rgba(255, 214, 140, 0.25);
         border-radius: 4px;
-        padding: 10px 14px;
-        font-size: 15px;
-        line-height: 1.7;
+        padding: 7px 12px;
+        font-size: 13px;
+        line-height: 1.5;
         text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
       }
       kbd {
@@ -609,10 +617,95 @@
         text-align: left;
         min-height: 18px;
       }
+      /* Mobile: kompaktný HUD a tlačidlá v mriežke 3×3 — nech je vidno aj hru. */
+      body.touch #info,
+      body.touch #zone,
+      body.touch #btn-ambience {
+        display: none;
+      }
+      body.touch #gta-hud {
+        right: 8px;
+        top: 8px;
+        gap: 3px;
+      }
+      body.touch #stars {
+        font-size: 15px;
+        letter-spacing: 2px;
+      }
+      body.touch #status-row {
+        gap: 7px;
+      }
+      body.touch #weapon-slot {
+        width: 34px;
+        height: 34px;
+      }
+      body.touch #weapon-icon {
+        font-size: 18px;
+      }
+      body.touch #weapon-ammo {
+        right: -6px;
+        bottom: -6px;
+        font-size: 12px;
+      }
+      body.touch #clock {
+        font-size: 18px;
+      }
+      body.touch #stamina,
+      body.touch #health,
+      body.touch #armor {
+        width: 104px;
+        height: 10px;
+      }
+      body.touch #money {
+        font-size: 19px;
+      }
+      body.touch #radar-wrap {
+        top: 152px;
+        right: 8px;
+        bottom: auto;
+        left: auto;
+        align-items: flex-end;
+        gap: 4px;
+      }
+      body.touch #minimap {
+        width: 92px;
+        height: 92px;
+      }
+      body.touch #mission-message {
+        font-size: 13px;
+        max-width: 56vw;
+        padding: 4px 10px;
+      }
+      body.touch #cheat-toast {
+        font-size: 13px;
+        padding: 6px 12px;
+      }
+      body.touch #radio-caption {
+        top: 96px;
+        font-size: 12px;
+        max-width: 70vw;
+        padding: 4px 10px;
+      }
       body.touch #touch-buttons {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        right: 8px;
+        bottom: 10px;
+      }
+      body.touch .tb {
+        width: 54px;
+        height: 46px;
+        font-size: 14px;
+      }
+      body.touch #btn-menu {
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+      /* Na mobile drží 💬 svoju bunku (len je neviditeľné), nech sa tlačidlá neposúvajú. */
+      body.touch #btn-talk.hidden {
+        display: block;
+        visibility: hidden;
       }
       /* Mobile/portrait: shrink the radar and tuck it under the top-right stats. */
       @media (max-width: 720px) {
@@ -620,19 +713,15 @@
           font-size: 44px;
         }
       }
-      body.touch #radar-wrap {
-        top: 205px;
-        right: 12px;
-        bottom: auto;
-        left: auto;
-        align-items: flex-end;
-      }
-      body.touch #minimap {
-        width: 124px;
-        height: 124px;
-      }
-      body.touch #info {
-        font-size: 12px;
+      /* Na šírku ide radar doľava dole — vpravo dole sú tlačidlá. */
+      @media (orientation: landscape) {
+        body.touch #radar-wrap {
+          top: auto;
+          bottom: 10px;
+          left: 8px;
+          right: auto;
+          align-items: flex-start;
+        }
       }
       #loading {
         position: fixed;
@@ -673,15 +762,15 @@
       <div id="touch-buttons">
         <button id="btn-camera" class="tb">KAM</button>
         <button id="btn-enter" class="tb">E</button>
-        <button id="btn-aim" class="tb">🎯</button>
-        <button id="btn-fire" class="tb">🔫</button>
-        <button id="btn-talk" class="tb hidden">💬</button>
         <button id="btn-weapon" class="tb">ZB</button>
+        <button id="btn-aim" class="tb">🎯</button>
         <button id="btn-jump" class="tb">&#8593;</button>
-        <button id="btn-down" class="tb hidden">&#8595;</button>
-        <button id="btn-fly" class="tb">FLY</button>
-        <button id="btn-ambience" class="tb" title="Zapnúť zvuk (Z)">🔊</button>
         <button id="btn-r" class="tb">R</button>
+        <button id="btn-fly" class="tb">FLY</button>
+        <button id="btn-talk" class="tb hidden">💬</button>
+        <button id="btn-fire" class="tb">🔫</button>
+        <button id="btn-down" class="tb hidden">&#8595;</button>
+        <button id="btn-ambience" class="tb" title="Zapnúť zvuk (Z)">🔊</button>
       </div>
     </div>
     <div id="hud" class="hidden">
@@ -705,9 +794,7 @@
       </div>
       <div id="mission-message"></div>
       <div id="keys">
-        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> pohyb &nbsp; <kbd>Shift</kbd> beh &nbsp; <kbd>Space</kbd> skok/brzda</div>
-        <div><kbd>C</kbd> kamera &nbsp; <kbd>E</kbd> auto &nbsp; <kbd>F</kbd> rozhovor &nbsp; <kbd>ľavé</kbd> streľba/úder &nbsp; <kbd>pravé</kbd> mierenie &nbsp; <kbd>1</kbd>–<kbd>0</kbd> zbraň</div>
-        <div><kbd>V</kbd> počasie &nbsp; <kbd>T</kbd> rádio &nbsp; <kbd>Q</kbd> stanica &nbsp; <kbd>Z</kbd> zvuk &nbsp; <kbd>M</kbd> dedinský tón &nbsp; <kbd>B</kbd> úplatok &nbsp; <kbd>R</kbd> pád &nbsp; <kbd>F5</kbd>/<kbd>F9</kbd> save/load &nbsp; <kbd>Esc</kbd> menu</div>
+        <div><kbd>F</kbd> rozhovor/vstup &nbsp; <kbd>E</kbd> auto &nbsp; <kbd>1</kbd>–<kbd>0</kbd> zbraň &nbsp; <kbd>V</kbd> počasie &nbsp; <kbd>T</kbd> rádio &nbsp; <kbd>Q</kbd> stanica &nbsp; <kbd>M</kbd> dedinský tón &nbsp; <kbd>Z</kbd> zvuk &nbsp; <kbd>B</kbd> úplatok &nbsp; <kbd>R</kbd> pád &nbsp; <kbd>F5</kbd>/<kbd>F9</kbd> save/load &nbsp; <kbd>Esc</kbd> pauza &nbsp; kódy = cheaty</div>
       </div>
     </div>
     <div id="overlay">
