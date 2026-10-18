@@ -15,6 +15,7 @@ export function createCameraRig(camera, player, colliders) {
   const target = new THREE.Vector3();
   const direction = new THREE.Vector3();
   const desired = new THREE.Vector3();
+  const right = new THREE.Vector3();
 
   function distanceLimited(from, to, distance) {
     const steps = 14;
@@ -75,17 +76,29 @@ export function createCameraRig(camera, player, colliders) {
 
     let distance = player.vehicle ? Math.max(state.distance, 8) : state.distance;
     if (state.aim) {
-      // Over-the-shoulder aim camera, GTA style: close in and lean right.
+      // Over-the-shoulder aim camera, GTA style: close in.
       distance = Math.min(distance, 2.6);
-      target.x += Math.cos(player.yaw) * 0.85;
-      target.z += -Math.sin(player.yaw) * 0.85;
     }
+    // Postava nesmie stáť v terči: kamera hľadí nad hlavu a kúsok dopredu,
+    // takže stred obrazovky — terč — ukazuje voľný priestor pred hráčom
+    // a postava ostáva vľavo pod ním (rovnako ako v GTA).
+    const sinYaw = Math.sin(player.yaw);
+    const cosYaw = Math.cos(player.yaw);
+    const forward = state.aim ? 1.1 : 0.45;
+    target.x += -sinYaw * forward;
+    target.z += -cosYaw * forward;
+    target.y += 0.55;
+    // Kamera je mierne vpravo od hráča, takže postava nezakrýva terč.
+    right.set(cosYaw, 0, -sinYaw);
+    const lean = state.aim ? 0.85 : 0.4;
     const dirY = player.vehicle ? 0.34 : 0.26;
     desired.set(target.x, target.y + distance * dirY, target.z).addScaledVector(direction, -distance);
+    desired.addScaledVector(right, lean);
 
     const clamped = distanceLimited(target, desired, distance);
     const pull = clamped < distance ? clamped : distance;
     desired.set(target.x, target.y + pull * dirY, target.z).addScaledVector(direction, -pull);
+    desired.addScaledVector(right, lean);
 
     camera.position.lerp(desired, 0.35);
     camera.lookAt(target);

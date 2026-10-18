@@ -25,7 +25,7 @@ Otvor `http://localhost:5173` a klikni na **PLAY**.
 | Klávesa | Akcia |
 | --- | --- |
 | `W` `A` `S` `D` | chôdza / jazda autom v smere kamery (vpravo = vpravo, svetlá napred) |
-| myš | rozhľad (3. osoba), `ľavé` = úder / streľba, `pravé` = mierenie (kamera cez rameno); terč je vidno vždy, keď máš v ruke zbraň |
+| myš | rozhľad (3. osoba), `ľavé` = úder / streľba, `pravé` = mierenie (kamera cez rameno); terč je vidno vždy, keď máš v ruke zbraň — kamera hľadí nad hlavu, takže terč ukazuje voľný priestor pred hráčom a postava stojí vľavo dole |
 | `Shift` | beh, kým vydrží stamina |
 | `Space` | skok (v aute brzda) |
 | `C` | prepni kameru 3. / 1. osoba |
@@ -134,7 +134,9 @@ Klient (`src/`) potom:
 10. `motion.js` — zdieľaná horizontálna fyzika (rozbeh, trenie, vzduch).
 11. `player.js` — first-person/3rd-person ovládač (gravitácia, kolízia, stamina, pád z neba).
 12. `avatar.js` — CJ-style postava s procedurálnymi animáciami (idle/chôdza/beh/skok).
-13. `camera-rig.js` — kamera 3. osoby s kolíziou, zoomom a mierením.
+13. `camera-rig.js` — kamera 3. osoby s kolíziou, zoomom a mierením; hľadí
+    **nad hlavu hráča** a je mierne vpravo, takže terč (stred obrazovky) nikdy
+    nesedí na postave — pri mierení sa priblíži a nakloní vpravo (cez rameno).
 14. `radar.js` — otáčavý radar s blipmi POI, severkou a zónou.
 15. `daynight.js` — cyklus dňa/noci, slnko a pouličné svetlá.
 16. `weather.js` — počasie (jasno/zamračené/dážď).
