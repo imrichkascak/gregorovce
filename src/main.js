@@ -22,6 +22,7 @@ import { createInteriors } from './interiors.js';
 import { createStatsTracker } from './stats.js';
 import { createCheats } from './cheats.js';
 import { createPickups } from './pickups.js';
+import { createAnimals } from './animals.js';
 import { createDialogue } from './dialogue.js';
 import { createPostFX } from './postfx.js';
 import { formatClock, formatMoney, stars as starString } from './rules.js';
@@ -120,6 +121,9 @@ world.quests = quests;
 world.collectibles = quests.collectibles;
 const pickups = createPickups({ scene, geo, player, weapons, audio, spots: quests.spots });
 world.pickups = pickups.list;
+// Zvieratá: sliepky a psy na dvore (kotvy z miest dediny).
+const animals = createAnimals({ scene, geo, spots: quests.spots });
+world.animals = animals.list;
 // Interiéry: vstupy do kostola, krčmy, obchodu a úradu (+ obsah a výstup).
 const interiors = createInteriors({
   scene,
@@ -667,6 +671,7 @@ function tick() {
   weapons.update(dt);
   effects.update(dt);
   pickups.update(dt);
+  animals.update(dt);
   syncAimHud();
   missions.update(dt);
   quests.update(dt);

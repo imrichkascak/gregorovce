@@ -246,6 +246,7 @@ function createExplosion(site) {
   );
   flash.position.y = height * 0.55;
   flash.scale.set(2, 2, 1);
+  flash.visible = false;
   group.add(flash);
 
   const smokeTex = softTexture('rgba(70,64,58,0.55)', 'rgba(70,64,58,0)');
@@ -255,6 +256,7 @@ function createExplosion(site) {
       new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0 }),
     );
     puff.position.y = height * 0.4;
+    puff.visible = false;
     group.add(puff);
     smokes.push(puff);
   }
@@ -272,6 +274,7 @@ function createExplosion(site) {
       }),
     );
     fire.position.set((hash(i + 8) - 0.5) * length * 0.4, 0.4, (hash(i + 9) - 0.5) * width * 0.4);
+    fire.visible = false;
     group.add(fire);
     fires.push(fire);
   }
@@ -349,12 +352,15 @@ function createExplosion(site) {
 
       const blast = state === 'blast' ? Math.max(0, 1 - stateTime / 0.35) : 0;
       flash.material.opacity = blast;
+      flash.visible = blast > 0.01;
       flash.scale.setScalar(3 + (1 - blast) * 14);
       light.intensity = blast * 18 + (state === 'blast' ? 1.2 : 0);
       scorch.material.opacity = state === 'whole' ? 0.12 : 0.55;
       smokes.forEach((puff, i) => {
         const life = state === 'blast' ? (stateTime * 0.35 + i * 0.14) % 1 : 0;
         puff.material.opacity = life > 0 ? (1 - life) * 0.55 : 0;
+        // Neviditeľné sprity sa nekreslia — šetrí draw calls, keď dom nevybuchuje.
+        puff.visible = life > 0;
         puff.position.y = height * 0.35 + life * 7;
         puff.position.x = (hash(i + 4) - 0.5) * 2 + Math.sin(stateTime + i) * 0.4;
         puff.scale.setScalar(1.2 + life * 4);
@@ -362,6 +368,7 @@ function createExplosion(site) {
       fires.forEach((fire, i) => {
         const on = state === 'blast' ? Math.max(0, 1 - stateTime / 2.6) : 0;
         fire.material.opacity = on * (0.65 + Math.sin(stateTime * 18 + i) * 0.25);
+        fire.visible = on > 0.01;
         fire.scale.set(1.1, 1.6 + Math.sin(stateTime * 14 + i) * 0.35, 1);
       });
     },

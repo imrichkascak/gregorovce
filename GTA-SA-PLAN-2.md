@@ -435,10 +435,10 @@ priblížila zážitok k SA.
 
 ### Fáza 14 — Hustota, výkon, mobil, finále
 
-- [ ] 14.1 Živý svet: viac áut (≥ 40), viac chodcov (≥ 50), zvieratá
+- [x] 14.1 Živý svet: viac áut (≥ 40), viac chodcov (≥ 50), zvieratá
       (sliepky/psy ≥ 10), skupinky NPC (pri krčme, pred kostolom).
       **Kritérium:** počty rastú; bez regresie starých checkov.
-- [ ] 14.2 Výkon: draw calls ≤ 200 a FPS ≥ 50 (verify meria rAF counter za
+- [x] 14.2 Výkon: draw calls ≤ 200 a FPS ≥ 50 (verify meria rAF counter za
       ~2 s); efekty poolované (žiadne alokácie v ticku). **Kritérium:** verify
       FPS/draw calls check zelený.
 - [ ] 14.3 Mobil: dotykové ovládanie pre každý nový systém (aim, voľby
@@ -528,6 +528,8 @@ alebo človek povie „stop“. Nikdy neodškrtávaj bez programového dôkazu.
 | 2026-10-15 | F13.5 Opravy podľa spätnej väzby (riadenie, ticho, overlay, favicon, plán) | `npm test` 31/31; `npm run verify` **99/99** (4 nové F4 checky); riadenie: `forward=(sin h, cos h)`, `heading -= steer`, `player.yaw = heading + π` (`along=0.929`, `sideways=0.371`, `nose=1.000`); ticho po štarte (`radio + ambience off by default`, `M`/`🔊` toggle); `#overlay-art` = `cover` (1100×780 aj 430×900 = celá plocha); `favicon.svg` + `favicon.png` (PNG 180×180: 48 % pozadie, 19 % kopec, 10,6 % žltá, 1,3 % červená); `ENGINE-PLAN.md` (len plán) | ✅ |
 | 2026-10-15 | F13.4 Rádio a zvuk hlbšie | `npm test` **39/39** (7 nových testov `radio-core.test.js`, vrátane regresie „posledné hlásenie prežije noty“); `npm run verify` **106/106** (7 nových F13 checkov); 6 staníc so žánrom (`stations=6 genres=6`), DJ hlásenia a reklamy sa striedajú medzi skladbami (`talks=3 kinds=dj+ad`), prepnutie stanice (`Playback FM→K-DST`, klávesa `Q`, dotyková stránka „Rádio“ s `buttons=7`), vlastný zvuk pre každú strelnú zbraň (`guns=5 unique=5`), motor podľa typu (`{"car":"engine-car","moto":"engine-moto","bike":"engine-bike"}`), HUD popis rádia (`box=8288px`); opravená plávajúca‑bodová chyba v checku `hodiny` (tolerancia 0,01 min) | ✅ |
 | 2026-10-15 | F13.6 Úplné vypnutie zvuku | `npm test` 39/39; `npm run verify` **108/108** (2 nové F13 checky, F4 rozšírený o master mute); `state.muted` default `true`, `masterGain()=0` po štarte, `toggleMute` mení gain (0 ↔ 0,5), `startRadio`/`startAmbience` odtlmia, SFX/rádio/DJ early-return keď je stlmené; klávesa `Z` + dotykové tlačidlo `🔊`/`🔇` (78×62 px), HUD popis `🔇 Zvuk je vypnutý — Z ho zapne, rádio T` (box=253px), pauza „Rádio“ s tlačidlami zvuku; screenshoty `/tmp/opencode/mute-start.png`, `mute-on.png`, `mute-pause.png`, `mute-mobile.png` | ✅ |
+| 2026-10-18 | F14.1 Živý svet (hustota) | `npm test` **44/44** (5 nových testov `animals-core.test.js`); `npm run verify` **115/115** (4 nové F14.1 checky); prepísaný `src/traffic.js` (autá v 2 instancovaných meshcoch, chodci v 6 InstancedMesh, skupinky NPC); nové `src/animals.js` + `src/animals-core.js` (12 zvierat: `{"chicken":6,"dog":6}`); `cars=48 peds=61` (predtým 24/34); skupinky `krčma=3 chat kostol=3 chat`; screenshoty `/tmp/opencode/f14-village.png`, `f14-church.png`, `f14-pub.png` | ✅ |
+| 2026-10-18 | F14.2 Výkon (draw calls, FPS, pooling) | `npm test` 44/44; `npm run verify` **115/115** (3 nové F14.2 checky); dedina `max=164` draw callov (rozpočet ≤ 200) a `fps=58.7` cez rAF counter za 4 s (verify launch dostal `--use-angle=metal`, bez GPU bolo ~3 FPS); efekty poolované (`particles=48 positions=144`); gags: neviditeľné sprity sa už nekreslia (11 callov menej) | ✅ |
 
 ### Rubrika V2 — aktuálne skóre
 

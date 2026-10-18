@@ -17,6 +17,10 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
 }
 
+// Headless Chromium na macOS renderuje softvérovo (~3 FPS). F14.2 meria FPS,
+// takže na macOS zapneme Metal — inak by FPS check nemal zmysel.
+const GPU_ARGS = process.platform === 'darwin' ? ['--use-angle=metal'] : [];
+
 function waitForServer(retries = 40) {
   return new Promise((resolve, reject) => {
     const attempt = (n) => {
@@ -31,7 +35,7 @@ function waitForServer(retries = 40) {
 }
 
 async function desktop() {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, args: GPU_ARGS });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const errors = [];
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -1145,12 +1149,99 @@ async function desktop() {
   );
   check('F13 switching the radio on unmutes the game', sound.radioUnmutes, 'radio start clears the mute');
 
+  // --- F14.1: živý svet — autá, chodci, zvieratá, skupinky NPC -----------------
+  const density = await page.evaluate(() => {
+    const { world } = window.__gregorovce;
+    const animals = world.animals ?? [];
+    const kinds = { chicken: 0, dog: 0 };
+    for (const animal of animals) kinds[animal.kind] = (kinds[animal.kind] ?? 0) + 1;
+    const groups = (world.traffic.groups ?? []).map((group) => ({
+      id: group.id,
+      members: group.members.length,
+      state: group.members[0]?.state ?? '',
+    }));
+    return {
+      cars: world.traffic.cars.length,
+      peds: world.traffic.peds.length,
+      animals: animals.length,
+      kinds,
+      groups,
+    };
+  });
+  check('F14.1 at least 40 cars drive the roads', density.cars >= 40, `cars=${density.cars}`);
+  check('F14.1 at least 50 pedestrians walk the village', density.peds >= 50, `peds=${density.peds}`);
+  check(
+    'F14.1 at least 10 animals (chickens, dogs) live in the village',
+    density.animals >= 10 && density.kinds.chicken > 0 && density.kinds.dog > 0,
+    `animals=${density.animals} ${JSON.stringify(density.kinds)}`,
+  );
+  check(
+    'F14.1 NPC groups chat at the pub and the church',
+    density.groups.length >= 2 && density.groups.every((g) => g.members >= 2 && g.state === 'chat'),
+    density.groups.map((g) => `${g.id}=${g.members} ${g.state}`).join(' '),
+  );
+
+  // --- F14.2: výkon — draw calls a FPS v dedine ---------------------------------
+  const perf = await page.evaluate(async () => {
+    const { renderer, player, geo, scene, camera } = window.__gregorovce;
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+    player.position.set(-650, geo.heightAt(-650, -400) + 1, -400);
+    let maxCalls = 0;
+    let worstYaw = 0;
+    let frames = 0;
+    let seconds = 0;
+    for (const yaw of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]) {
+      player.yaw = yaw;
+      // Kamera sa dorovnáva plynule — nechaj ju usadiť, až potom meraj.
+      const settle = performance.now() + 700;
+      while (performance.now() < settle) await frame();
+      const until = performance.now() + 1000;
+      const started = performance.now();
+      while (performance.now() < until) {
+        renderer.render(scene, camera);
+        if (renderer.info.render.calls > maxCalls) {
+          maxCalls = renderer.info.render.calls;
+          worstYaw = yaw;
+        }
+        frames += 1;
+        await frame();
+      }
+      seconds += (performance.now() - started) / 1000;
+    }
+    return { maxCalls, worstYaw: worstYaw.toFixed(2), fps: frames / seconds };
+  });
+  check(
+    'F14.2 village stays under 200 draw calls',
+    perf.maxCalls <= 200,
+    `max=${perf.maxCalls} yaw=${perf.worstYaw}`,
+  );
+  check('F14.2 village runs at 50+ FPS', perf.fps >= 50, `fps=${perf.fps.toFixed(1)}`);
+
+  // Efekty sú poolované: spawn nikdy nezvýši počet častíc ani pozícií.
+  const pooling = await page.evaluate(() => {
+    const { effects } = window.__gregorovce;
+    const fire = effects.systems.fire;
+    const before = { particles: fire.particles.length, positions: fire.positions.length, count: fire.def.count };
+    for (let i = 0; i < 60; i += 1) effects.spawn('fire', 0, 0, 0);
+    return {
+      before,
+      after: { particles: fire.particles.length, positions: fire.positions.length },
+    };
+  });
+  check(
+    'F14.2 effects are pooled (no per-tick allocation)',
+    pooling.before.count === 48 &&
+      pooling.after.particles === pooling.before.particles &&
+      pooling.after.positions === pooling.before.positions,
+    `particles=${pooling.after.particles} positions=${pooling.after.positions}`,
+  );
+
   check('no console errors', errors.length === 0, errors.join(' | '));
   await browser.close();
 }
 
 async function mobile() {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, args: GPU_ARGS });
   const context = await browser.newContext({ ...devices['iPhone 14'], hasTouch: true });
   const page = await context.newPage();
   const errors = [];
