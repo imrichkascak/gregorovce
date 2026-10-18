@@ -15,7 +15,26 @@ Exit 0 = všetko prešlo. Agent **nevidí obrázky** — estetiku potvrdzuje čl
 
 Debug handle `window.__gregorovce` obsahuje: `THREE, scene, camera, renderer, geo,
 world, player, layers, avatar, cameraRig, radar, dayNight, weather, audio, weapons,
-vehicles, wanted, missions, postfx`. Každý nový systém vystav tu.
+effects, pickups, vehicles, wanted, missions, quests, dialogue, interiors, stats,
+cheats, postfx, syncAimHud`. Každý nový systém vystav tu.
+
+## Rozpočet výkonu (F14.2)
+
+Dedina musí ostať plynulá — po každej zmene, ktorá pridáva meshe, over rozpočet:
+
+| Metrika | Rozpočet | Ako sa meria |
+| --- | --- | --- |
+| Draw calls | **≤ 200** v dedine | `renderer.info.render.calls` po `render()` |
+| FPS | **≥ 50** | rAF counter za 4 s |
+| Alokácie v ticku | žiadne | efekty poolované, sprity `visible = false` |
+
+- Stred dediny je `(-650, -400)` — odtiaľ meraj draw calls vo všetkých smeroch
+  (najhorší pohľad je pri krčme a kostole).
+- Kamera po teleporte **lerpuje** — pred meraním počkaj ~0,7 s, inak čísla
+  kolíšu (napr. krčma 87 → 204 → 101).
+- Veľa meshov = málo callov: autá (`carBodies` + `carLights`), chodci
+  (6 InstancedMesh) aj zvieratá sú inštancované/zlúčené. Neviditeľné sprity
+  (`visible = false`) sa nekreslia.
 
 ## Mapa vizuálneho štýlu
 
@@ -58,4 +77,7 @@ Tipy pre headless overenie (port 5173, viewport aspoň 1440×900):
    `window.__gregorovce.player.pitch` / `.yaw` (debug handle je v `src/main.js`).
 4. Screenshoty (`page.screenshot`) načítaj späť do konverzácie nástrojom Read a
    vizuálne skontroluj — žiadne console errory neznamená, že to vyzerá dobre.
-5. Na konci server vždy vypni.
+5. **FPS meraj s GPU**: predvolený headless Chromium renderuje softvérom
+   (~3 FPS) — spúšťaj `chromium.launch({ args: ['--use-angle=metal'] })` (macOS),
+   inak FPS check v `verify.cjs` padá. `scripts/verify.cjs` to má v `GPU_ARGS`.
+6. Na konci server vždy vypni.
