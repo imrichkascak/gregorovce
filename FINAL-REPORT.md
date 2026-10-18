@@ -121,15 +121,20 @@ Podľa plánu (`GTA-SA-PLAN-2.md`, sekcia 6) zámerne **nie je** implementované
 
 Ďalšie obmedzenia prostredia:
 
-- **Deploy na Vercel sa nespustil** — `vercel` / `npx vercel` v prostredí nie je
-  k dispozícii (plán ho má ako podmienený krok: „ak je dostupné“). Hru vieš
-  nasadiť ručne: `npx vercel --prod --yes` v koreni repa.
+- **Deploy na Vercel beží automaticky po pushi** — `gregorovce.vercel.app` (projekt
+  `gregorovce`); po commite `215099c` (F15) som overil, že na produkcii beží nový
+  kód (`kódy = cheaty`, `repeat(3, 1fr)`, `fireHeld`, `scatterRight`,
+  `#crosshair.aim`, `body.touch #info`). Ak by bolo treba nasadiť ručne:
+  `npx vercel --prod --yes` v koreni repa.
 - **Estetiku potvrdzuje človek** — agent nevidí obrázky; všetky vizuálne zmeny sú
   overené len programovo (draw calls, pozície, farby v kóde) + screenshotmi pre
   človeka v `/tmp/opencode`.
-- **`AGENTS.md` nebol aktualizovaný** — je to chránený súbor (agent-instruction
-  file), zápis si vyžiadal schválenie používateľa a to vypršalo. Poznámky k rozpočtu
-  výkonu a novému debug handle sú zatiaľ len v tomto reporte a v `README.md`.
+- **`AGENTS.md` aktualizovaný** — po schválení používateľom (commit `1960ba8`)
+  obsahuje nový debug handle (vrátane `effects, pickups, quests, dialogue,
+  interiors, stats, cheats, postfx, syncAimHud`), sekciu **„Rozpočet výkonu
+  (F14.2)“** (draw calls ≤ 200, FPS ≥ 50, `renderer.info.render.calls`, stred
+  dediny `(-650, -400)`, usadenie kamery ~0,7 s) a poznámku o `--use-angle=metal`
+  pre meranie FPS v headless.
 
 ---
 
