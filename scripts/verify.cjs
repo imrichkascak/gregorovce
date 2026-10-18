@@ -1257,6 +1257,92 @@ async function mobile() {
   await page.screenshot({ path: `${OUT}/verify-mobile.png` });
   check('F8 mobile touch mode active', touch, `body.touch=${touch}`);
   check('F8 mobile camera toggle works', mode0 !== mode1, `${mode0}→${mode1}`);
+
+  // --- F14.3: dotyková parita nových systémov ---------------------------------
+  // Každý nový systém musí ísť ovládať ťuknutím rovnako ako klávesnicou:
+  // mierenie, voľby dialógu, pickupy, interiéry a cheaty.
+
+  // 1) Mierenie — tlačidlo 🎯.
+  await page.evaluate(() => window.__gregorovce.weapons.setAiming(false));
+  await page.tap('#btn-aim');
+  const aiming = await page.evaluate(() => window.__gregorovce.weapons.state.aiming);
+  check('F14.3 touch aim toggles aiming', aiming === true, `aiming=${aiming}`);
+
+  // 2) Dialóg — 💬 pri giverovi otvorí dialóg a voľba sa dá ťuknúť.
+  await page.evaluate(() => {
+    const { player, geo, dialogue, world } = window.__gregorovce;
+    dialogue.hide();
+    const giver = world.quests.givers[0];
+    player.position.set(giver.x, geo.heightAt(giver.x, giver.z + 2), giver.z + 2);
+    world.quests.update(0.1);
+  });
+  await page.waitForTimeout(200);
+  const talk = await page.evaluate(() => ({
+    near: window.__gregorovce.world.quests.state.nearGiver,
+    hidden: document.getElementById('btn-talk').classList.contains('hidden'),
+  }));
+  await page.tap('#btn-talk');
+  const talkOpen = await page.evaluate(() => {
+    const { dialogue } = window.__gregorovce;
+    return { open: dialogue.state.open, choices: dialogue.state.choices.length };
+  });
+  await page.tap('#dialogue-choices button');
+  const talkPicked = await page.evaluate(() => !window.__gregorovce.dialogue.state.open);
+  check(
+    'F14.3 touch talk opens a dialogue with choices',
+    Boolean(talk.near) && talk.hidden === false && talkOpen.open && talkOpen.choices >= 2,
+    `near=${Boolean(talk.near)} choices=${talkOpen.choices}`,
+  );
+  check('F14.3 touch dialogue choice is tappable', talkPicked, `closed=${talkPicked}`);
+
+  // 3) Pickup — chôdza po pickupe ho vyzdvihne (dotykový joystick).
+  const pickup = await page.evaluate(() => {
+    const { player, geo, world, pickups } = window.__gregorovce;
+    const health = world.pickups.find((p) => p.kind === 'health');
+    player.health = 40;
+    player.position.set(health.x, geo.heightAt(health.x, health.z), health.z);
+    pickups.update(0.05);
+    return { healed: player.health > 40, hidden: health.object.visible === false };
+  });
+  check('F14.3 touch walk collects a pickup', pickup.healed && pickup.hidden, `healed=${pickup.healed}`);
+
+  // 4) Interiér — 💬 pri dverách vstúpi dnu.
+  await page.evaluate(() => {
+    const { player, geo, world, interiors } = window.__gregorovce;
+    const room = world.interiors.find((r) => r.id === 'kostol');
+    player.position.set(room.door.x, geo.heightAt(room.door.x, room.door.z), room.door.z);
+    interiors.update(0.1);
+  });
+  await page.waitForTimeout(200);
+  await page.tap('#btn-talk');
+  const inside = await page.evaluate(() => window.__gregorovce.interiors.state.inside);
+  check('F14.3 touch talk enters an interior', inside === 'kostol', `inside=${inside}`);
+
+  // 5) Cheaty — MENU → stránka Cheaty → ťuknutie na kód.
+  await page.tap('#btn-menu');
+  await page.waitForTimeout(200);
+  await page.evaluate(() => document.querySelector('#pause-menu button[data-action="cheats"]').click());
+  await page.waitForTimeout(200);
+  const cheatsBefore = await page.evaluate(() => ({
+    rows: document.querySelectorAll('#pause-content [data-cheat]').length,
+    money: window.__gregorovce.player.money,
+  }));
+  // Pauza je pod dotykovou vrstvou — klikni priamo (rovnaký handler ako tap).
+  await page.evaluate(() => document.querySelector('#pause-content [data-cheat="peniaze"]').click());
+  // HUD toast sa aktualizuje v ďalšom frame hry.
+  await page.waitForTimeout(250);
+  const cheatsAfter = await page.evaluate(() => ({
+    money: window.__gregorovce.player.money,
+    shown: !document.getElementById('cheat-toast').classList.contains('hidden'),
+    toast: document.getElementById('cheat-toast').textContent,
+  }));
+  check(
+    'F14.3 touch cheat page fires a cheat',
+    cheatsBefore.rows >= 6 && cheatsAfter.money > cheatsBefore.money && cheatsAfter.shown,
+    `rows=${cheatsBefore.rows} money=${cheatsBefore.money}→${cheatsAfter.money} toast=${cheatsAfter.toast}`,
+  );
+  await page.screenshot({ path: `${OUT}/verify-mobile-f14.png` });
+
   check('F8 mobile no errors', errors.length === 0, errors.join(' | '));
   await browser.close();
 }

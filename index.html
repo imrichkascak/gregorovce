@@ -252,7 +252,8 @@
         border: 2px solid #000;
         border-radius: 4px;
         padding: 14px 18px;
-        z-index: 5;
+        /* Nad dotykovou vrstvou (z-index 5) — inak sa voľby na mobile nedajú ťuknúť. */
+        z-index: 6;
       }
       #dialogue.hidden {
         display: none;
